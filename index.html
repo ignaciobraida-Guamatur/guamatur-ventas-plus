@@ -265,7 +265,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
   OAUTH_DOMINIO: 'guamatur.com',
-  VERSION: 'v3',
+  VERSION: 'v4',
 };
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   db: { schema: 'ventasplus' },
@@ -640,7 +640,7 @@ function pintarMensual() {
     sems.map(s => '<th class="num">' + s.codigo + '</th>').join('') +
     '<th class="num">Fichas mes</th><th class="num">Facturación</th><th class="num">Rentabilidad</th>' +
     '<th>% cumplimiento</th><th class="num">Sin Chatwoot</th><th class="num">Pidió apoyo</th>' +
-    '<th class="num">Fichas base</th><th class="num">Desvío</th></tr></thead><tbody>' +
+    '<th class="num">Base / mes</th><th class="num">Esperado a esta altura</th><th class="num">Desvío</th></tr></thead><tbody>' +
     filas.map(f => '<tr><td><strong>' + esc(f.corto) + '</strong></td><td>' + esc(f.encargado) + '</td>' +
       sems.map(s => '<td class="num">' + porSem(f.vendedor_id, s.codigo) + '</td>').join('') +
       '<td class="num"><strong>' + Number(f.fichas_mes || 0) + '</strong></td>' +
@@ -653,6 +653,9 @@ function pintarMensual() {
       '<td class="num"' + (f.semanas_sin_chatwoot ? ' style="color:var(--mal);font-weight:700"' : '') + '>' + f.semanas_sin_chatwoot + '</td>' +
       '<td class="num">' + f.semanas_con_pedido + '</td>' +
       '<td class="num">' + (f.fichas_base == null ? '—' : Number(f.fichas_base)) + '</td>' +
+      '<td class="num">' + (f.base_al_ritmo == null ?
+        '<span class="chip" title="No se cargó ninguna semana con fichas">sin cargar</span>'
+        : Number(f.base_al_ritmo)) + '</td>' +
       '<td class="num"' + (f.desvio_vs_base < 0 ? ' style="color:var(--mal);font-weight:700"' :
         f.desvio_vs_base > 0 ? ' style="color:var(--ok);font-weight:700"' : '') + '>' +
         (f.desvio_vs_base == null ? '—' : (f.desvio_vs_base > 0 ? '+' : '') + Number(f.desvio_vs_base)) + '</td></tr>').join('') +
@@ -661,10 +664,10 @@ function pintarMensual() {
       '<td class="num">' + T('fichas_mes') + '</td><td class="num">' + (T('facturacion_mes') ? miles(T('facturacion_mes')) : '—') + '</td>' +
       '<td class="num">' + (T('rentabilidad_mes') ? miles(T('rentabilidad_mes')) : '—') + '</td><td></td>' +
       '<td class="num">' + T('semanas_sin_chatwoot') + '</td><td class="num">' + T('semanas_con_pedido') + '</td>' +
-      '<td></td><td></td></tr></tbody></table></div>' +
-    (filas.every(f => f.fichas_base == null) ? '<div class="aviso rojo" style="margin-top:12px">La línea de base ' +
-      'está vacía, así que <strong>«Desvío» no se puede calcular</strong>: hoy se sabe cuánta actividad hubo, ' +
-      'pero no si mejoró los números.</div>' : '');
+      '<td></td><td></td><td></td></tr></tbody></table></div>' +
+    (filas.every(f => f.fichas_base == null)
+      ? '<div class="aviso rojo" style="margin-top:12px">La línea de base está vacía, así que <strong>«Desvío» no se puede calcular</strong>: hoy se sabe cuánta actividad hubo, pero no si mejoró los números.</div>'
+      : '<div class="aviso info" style="margin-top:12px"><strong>Cómo leer el desvío.</strong> «Base / mes» es el promedio mensual de cada uno en el semestre previo al plan (ene-jun 2026, por fecha de venta). Como el ciclo está en curso, se compara contra esa base <strong>prorrateada a las semanas que se cargaron</strong>. Si no se cargó ninguna, queda vacío a propósito: <strong>una celda sin cargar no es un cero</strong> y el tablero no va a afirmar una caída que no pasó.</div>');
 
   const dir = esDireccion(), dis = dir ? '' : ' disabled';
   $('#base').innerHTML = '<table><thead><tr><th>Vendedor</th><th>Encargado</th><th class="num">Fichas / mes</th>' +
