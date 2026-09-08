@@ -140,6 +140,9 @@ details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
 #login p{color:var(--suave);font-size:13px;margin:0 0 22px}
 #login .btn{width:100%;padding:11px}
 #login .nota{font-size:11.5px;color:var(--suave);margin-top:16px}
+#comoSeUsa{margin-bottom:13px;background:#eff6ff;border-color:#bfdbfe}
+#comoSeUsa summary{color:#1e40af}
+#comoSeUsa p{font-size:12.5px;line-height:1.55;color:#1e3a5f;margin:9px 0 0}
 #cargando{padding:60px 24px;text-align:center;color:var(--suave)}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;
   padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:99}
@@ -178,6 +181,21 @@ details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
 <div class="wrap">
 
 <div class="vista on" id="v-semana">
+  <details id="comoSeUsa"><summary>Cómo se usa · leelo una vez y no lo mirás nunca más</summary>
+    <p><strong>Una tarjeta por vendedor, tres pasos, en el orden de la reunión.</strong> Los tres puntitos de
+    arriba a la derecha te dicen cuánto falta; abajo dice exactamente qué.</p>
+    <p><strong>1 · Lo que le pedimos.</strong> La acción acordada <em>aparece sola</em>: es lo que quedó escrito
+    la semana pasada. No se escribe. Marcás si la cumplió y anotás la evidencia — qué pasó concretamente,
+    con números. Si el vendedor fue anotando avances, los vas a ver ahí y no tenés que reconstruir de memoria.</p>
+    <p><strong>2 · Los números.</strong> Reales, no estimados. Si la semana todavía no cerró, se dejan vacíos.
+    La facturación va por <em>fecha de venta</em> — ojo que los OKR del holding van por fecha de viaje y no son
+    comparables. Y «¿usó Chatwoot?» es fijo, no una acción suelta: si trabaja por fuera, no se puede medir.</p>
+    <p><strong>3 · Lo que le pedimos ahora.</strong> Concreto y medible, porque se evalúa la semana que viene.
+    Y lo que necesita de nosotros: <strong>si esa casilla queda siempre vacía, esto se está viviendo como una
+    auditoría</strong> y no como acompañamiento.</p>
+    <p><strong>Cumplimiento:</strong> Sí = 1, Parcial = 0,5, No = 0. El denominador son solo las semanas que se
+    evaluaron. Se guarda solo, apenas salís del campo.</p>
+  </details>
   <div id="avisoSemana"></div>
   <div class="kpis" id="kpis"></div>
   <div class="barra">
@@ -223,6 +241,13 @@ details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
   <div id="trayect"></div>
 </div>
 
+<div class="vista" id="v-equipo">
+  <div class="aviso info">Acá se da de alta a quien entra. <strong>Responsable</strong> ve todo el plan y
+  edita a sus vendedores; <strong>dirección</strong> edita todo y carga la línea de base;
+  <strong>vendedor</strong> ve solo lo suyo, anota sus avances y pide apoyo — no puede evaluarse a sí mismo.</div>
+  <div id="equipo"></div>
+</div>
+
 <!-- ── vista del vendedor ── -->
 <div class="vista" id="v-mia"><div id="miBody"></div></div>
 <div class="vista" id="v-mihistoria"><div id="miHistoria"></div></div>
@@ -240,7 +265,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
   OAUTH_DOMINIO: 'guamatur.com',
-  VERSION: 'v2',
+  VERSION: 'v3',
 };
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   db: { schema: 'ventasplus' },
@@ -298,7 +323,8 @@ async function arrancar() {
   $('#subtitulo').textContent = esVendedor()
     ? 'Lo que quedamos que ibas a hacer, y cómo viene.'
     : 'Lo que se pidió contra lo que se hizo, semana a semana.';
-  const vistas = esVendedor() ? VISTAS_VEND : VISTAS_RESP;
+  const vistas = esVendedor() ? VISTAS_VEND
+    : (esDireccion() ? VISTAS_RESP.concat([['equipo','Equipo y accesos']]) : VISTAS_RESP);
   $('#nav').innerHTML = vistas.map((v, i) =>
     '<button class="' + (i === 0 ? 'on' : '') + '" data-v="' + v[0] + '">' + v[1] + '</button>').join('');
   $$('.vista').forEach(x => x.classList.remove('on'));
@@ -903,11 +929,113 @@ function pintarMiHistoria() {
       : '<div class="vacio">Todavía no hay semanas cargadas.</div>');
 }
 
+// ══ 8 · EQUIPO Y ACCESOS (solo dirección) ═══════════════════════════════════
+// Sin esto, sumar a alguien al plan dependería de que alguien corra SQL a mano.
+async function cargarPerfiles() {
+  const p = await sb.from('perfiles').select('*').order('rol').order('nombre');
+  if (p.error) return fallo(p.error, 'cargando los perfiles');
+  D.perfiles = p.data;
+}
+async function pintarEquipo() {
+  if (!D.perfiles) await cargarPerfiles();
+  const ROLES = ['direccion','encargado','vendedor'];
+  const opcVend = v => '<option value=""' + (v ? '' : ' selected') + '>—</option>' +
+    D.vendedores.map(x => '<option value="' + x.id + '"' + (v === x.id ? ' selected' : '') + '>' + esc(x.corto) + '</option>').join('');
+  $('#equipo').innerHTML =
+    '<h2>Quién entra <small>' + D.perfiles.length + ' cuentas</small></h2><div class="scrollx"><table><thead><tr>' +
+    '<th>Mail</th><th>Nombre</th><th>Rol</th><th>Si es vendedor, cuál</th><th>Activo</th><th></th></tr></thead><tbody>' +
+    D.perfiles.map(p => '<tr><td>' + esc(p.email) + '</td>' +
+      '<td class="editable"><input data-p="' + p.email + '|nombre" value="' + esc(p.nombre) + '"></td>' +
+      '<td class="editable"><select data-p="' + p.email + '|rol">' + ROLES.map(r =>
+        '<option' + (p.rol === r ? ' selected' : '') + '>' + r + '</option>').join('') + '</select></td>' +
+      '<td class="editable"><select data-p="' + p.email + '|vendedor_id">' + opcVend(p.vendedor_id) + '</select></td>' +
+      '<td class="editable" style="text-align:center"><input type="checkbox" data-p="' + p.email + '|activo"' +
+        (p.activo ? ' checked' : '') + ' style="width:auto"></td>' +
+      '<td>' + (p.email === YO.email ? '<span class="chip">sos vos</span>' :
+        '<button class="btn chico sec" data-quitar="' + p.email + '">Quitar</button>') + '</td></tr>').join('') +
+    '</tbody></table></div>' +
+    '<div class="barra" style="margin-top:12px">' +
+      '<input id="npMail" placeholder="mail@guamatur.com" style="min-width:230px">' +
+      '<input id="npNombre" placeholder="Nombre y apellido" style="min-width:190px">' +
+      '<select id="npRol">' + ROLES.map(r => '<option' + (r === 'encargado' ? ' selected' : '') + '>' + r + '</option>').join('') + '</select>' +
+      '<select id="npVend">' + opcVend('') + '</select>' +
+      '<button class="btn" id="npAdd">Dar de alta</button>' +
+      '<span class="cnt">Si el rol es «vendedor», elegí a cuál del plantel corresponde.</span></div>' +
+
+    '<h2>El plantel <small>a quién se le sigue, y de quién es</small></h2><div class="scrollx"><table><thead><tr>' +
+    '<th>Vendedor</th><th>Encargado</th><th>Mail del encargado</th><th>Activo</th></tr></thead><tbody>' +
+    D.vendedores.map(v => '<tr><td><strong>' + esc(v.nombre) + '</strong></td>' +
+      '<td class="editable"><input data-v="' + v.id + '|encargado" value="' + esc(v.encargado) + '"></td>' +
+      '<td class="editable"><input data-v="' + v.id + '|encargado_email" value="' + esc(v.encargado_email) + '"></td>' +
+      '<td class="editable" style="text-align:center"><input type="checkbox" data-v="' + v.id + '|activo"' +
+        (v.activo ? ' checked' : '') + ' style="width:auto"></td></tr>').join('') +
+    '</tbody></table></div>' +
+    '<div class="aviso" style="margin-top:10px">El <strong>mail del encargado</strong> es lo que manda para los ' +
+    'permisos: si lo cambiás, ese vendedor pasa a ser editable por esa persona y por nadie más.</div>';
+
+  // La base exige que rol='vendedor' y ficha vayan juntos. Se resuelve acá con un mensaje
+  // entendible, en vez de dejar que salga el error crudo de Postgres.
+  const guardarPerfil = async (email, campo, valor) => {
+    const p = D.perfiles.find(x => x.email === email) || {};
+    const patch = { [campo]: valor };
+    if (campo === 'rol') {
+      if (valor === 'vendedor' && !p.vendedor_id) {
+        toast('Primero elegí a qué vendedor del plantel corresponde', true);
+        return pintarEquipo();
+      }
+      if (valor !== 'vendedor') patch.vendedor_id = null;
+    }
+    if (campo === 'vendedor_id') {
+      if (valor) patch.rol = 'vendedor';                       // elegir ficha = es vendedor
+      else if (p.rol === 'vendedor') {
+        toast('Un vendedor no puede quedar sin ficha: cambiale el rol primero', true);
+        return pintarEquipo();
+      }
+    }
+    const { error } = await sb.from('perfiles').update(patch).eq('email', email);
+    if (error) return fallo(error, 'guardando el perfil');
+    await cargarPerfiles(); toast('Guardado'); pintarEquipo();
+  };
+  $$('[data-p]').forEach(el => el.onchange = () => {
+    const p = el.dataset.p.split('|');
+    guardarPerfil(p[0], p[1], el.type === 'checkbox' ? el.checked : (el.value || null));
+  });
+  $$('[data-quitar]').forEach(b => b.onclick = async () => {
+    if (!confirm('¿Sacar a ' + b.dataset.quitar + ' del plan? Deja de poder entrar.')) return;
+    const { error } = await sb.from('perfiles').delete().eq('email', b.dataset.quitar);
+    if (error) return fallo(error, 'quitando el acceso');
+    await cargarPerfiles(); toast('Quitado'); pintarEquipo();
+  });
+  $$('[data-v]').forEach(el => el.onchange = async () => {
+    const p = el.dataset.v.split('|');
+    const { error } = await sb.from('vendedores').update(
+      { [p[1]]: el.type === 'checkbox' ? el.checked : el.value }).eq('id', p[0]);
+    if (error) return fallo(error, 'guardando el plantel');
+    const ve = await sb.from('vendedores').select('*').eq('activo', true).order('orden');
+    D.vendedores = ve.data; D.vById = {}; D.vendedores.forEach(x => D.vById[x.id] = x);
+    await cargarGrilla(); toast('Guardado'); pintarEquipo();
+  });
+  $('#npAdd').onclick = async () => {
+    const email = ($('#npMail').value || '').trim().toLowerCase();
+    const nombre = ($('#npNombre').value || '').trim();
+    const rol = $('#npRol').value, vend = $('#npVend').value || null;
+    if (!/^[^@\s]+@guamatur\.com$/.test(email)) return toast('Tiene que ser un mail @guamatur.com', true);
+    if (!nombre) return toast('Falta el nombre', true);
+    if (rol === 'vendedor' && !vend) return toast('Elegí a qué vendedor del plantel corresponde', true);
+    const { error } = await sb.from('perfiles').insert(
+      { email, nombre, rol, vendedor_id: rol === 'vendedor' ? vend : null });
+    if (error) return fallo(error, 'dando de alta');
+    $('#npMail').value = ''; $('#npNombre').value = '';
+    await cargarPerfiles(); toast('Dado de alta'); pintarEquipo();
+  };
+}
+
 // ── Pintar ───────────────────────────────────────────────────────────────────
 function pintar() {
   medirTope();
   const v = vistaActual();
-  if (v === 'semana') pintarSemana();
+  if (v === 'equipo') pintarEquipo();
+  else if (v === 'semana') pintarSemana();
   else if (v === 'grilla') pintarGrilla();
   else if (v === 'mensual') pintarMensual();
   else if (v === 'evolucion') pintarEvolucion();
