@@ -311,7 +311,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
   OAUTH_DOMINIO: 'guamatur.com',
-  VERSION: 'v6',
+  VERSION: 'v7',
 };
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   db: { schema: 'ventasplus' },
@@ -576,17 +576,54 @@ function pintarSemana() {
     '<div class="vacio">Nada para mostrar con este filtro.</div>';
   engancharTarjetas();
 }
-function tarjeta(g, cerrada) {
-  const mio = puedoEditar(g.vendedor_id), dis = mio ? '' : ' disabled';
-  const pa = g.pa, estado = pa.hechos === 3 ? 'lista' : (g.accion_acordada && !g.cumplida) ? 'urgente' : 'falta';
-  const etiq = pa.hechos === 3 ? 'cerrada' : 'falta ' + pa.falta.length;
-  const av = avancesDe(g.vendedor_id, CICLO, SEMANA);
+// Los campos de la semana, en tres bloques. Se usan en DOS lugares: la tarjeta de «Esta semana»
+// (el repaso del lunes) y adentro de «La 1a1» (la reunión). Es el mismo dato y la misma regla;
+// lo que cambia es el momento. Por eso se arman una sola vez y no dos.
+function camposSemana(g, cod) {
+  const dis = puedoEditar(g.vendedor_id) ? '' : ' disabled';
+  const av = avancesDe(g.vendedor_id, g.ciclo_id || CICLO, cod || SEMANA);
   const seg = (campo, ops) => '<div class="seg">' + ops.map(o =>
     '<button data-f="' + campo + '" data-v="' + o + '" class="' + (g[campo] === o ? 'on' : '') + '"' + dis + '>' + o + '</button>').join('') + '</div>';
   const inp = (campo, ph, falta) => '<input data-f="' + campo + '" value="' + esc(g[campo] == null ? '' : g[campo]) +
     '" placeholder="' + ph + '"' + (falta ? ' class="falta-dato"' : '') + dis + '>';
   const ta = (campo, ph, falta) => '<textarea data-f="' + campo + '" placeholder="' + ph + '"' +
     (falta ? ' class="falta-dato"' : '') + dis + '>' + esc(g[campo] || '') + '</textarea>';
+
+  return {
+    // 1 · lo que le pedimos y si lo hizo
+    pedido:
+      '<div class="pedido' + (g.accion_acordada ? '' : ' vacia') + '">' +
+        (g.accion_acordada ? esc(g.accion_acordada) : 'La semana pasada no se le pidió nada.') + '</div>' +
+      (av.length ? '<div class="avances" style="margin-top:9px"><b>Lo que anotó ' + esc(g.corto) + ' esta semana</b>' +
+        av.map(a => '<p>' + esc(a.texto) + ' <span class="cuando">· ' + fmtF(a.fecha) + '</span></p>').join('') + '</div>' : '') +
+      (g.accion_acordada ? '<div class="campo" style="margin-top:9px"><label><b>¿Cumplida?</b></label>' + seg('cumplida', ['Sí','Parcial','No']) + '</div>' +
+        '<div class="campo"><label>Evidencia — <b>qué pasó concretamente</b> (números, respuestas, capturas)</label>' +
+        ta('evidencia', 'ej: mandó 12 mensajes, contestaron 3, 1 pasó a cotización', g.cumplida && !(g.evidencia||'').trim()) + '</div>' : ''),
+    // 2 · los números
+    numeros:
+      '<div class="numeros">' +
+        '<div class="campo"><label>Fichas</label>' + inp('fichas', '0', false) + '</div>' +
+        '<div class="campo"><label>Facturación USD</label>' + inp('facturacion', '0', false) + '</div>' +
+        '<div class="campo"><label>Rentabilidad USD</label>' + inp('rentabilidad', '0', false) + '</div></div>' +
+      '<div class="campo" style="margin-top:4px"><label><b>¿Usó Chatwoot?</b> — si trabaja por fuera, no se puede medir</label>' +
+        seg('chatwoot_ok', ['Sí','No']) + '</div>',
+    // 3 · lo que le pedimos ahora
+    proxima:
+      '<div class="campo"><label><b>Acción para esta semana</b> — concreta y medible</label>' +
+        ta('accion_proxima', 'ej: contactar a los 15 de la lista de verano y traer las respuestas', !g.accion_proxima) + '</div>' +
+      '<div class="campo"><label>¿Qué necesita de nosotros? <b>Si siempre queda vacío, esto es una auditoría</b></label>' +
+        inp('bloqueo', 'ej: necesita el PDF de preventa aprobado', false) + '</div>',
+    foco:
+      '<div class="campo"><label>Foco del mes</label>' +
+        '<input data-f="foco" value="' + esc(g.foco || '') + '" placeholder="el objetivo del ciclo"' + dis + '></div>',
+  };
+}
+
+function tarjeta(g, cerrada) {
+  const mio = puedoEditar(g.vendedor_id);
+  const pa = g.pa, estado = pa.hechos === 3 ? 'lista' : (g.accion_acordada && !g.cumplida) ? 'urgente' : 'falta';
+  const etiq = pa.hechos === 3 ? 'cerrada' : 'falta ' + pa.falta.length;
+  const C = camposSemana(g, SEMANA);
 
   return '<div class="tarj ' + estado + (mio ? '' : ' ajeno') + '" data-vend="' + g.vendedor_id + '">' +
     '<div class="cab"><div><div class="nom">' + esc(g.nombre) + '</div>' +
@@ -596,55 +633,35 @@ function tarjeta(g, cerrada) {
         [pa.p1, pa.p2, pa.p3].map(p => '<i class="' + (p ? 'ok' : '') + '"></i>').join('') + '</div></div></div>' +
 
     '<div class="paso' + (pa.p1 ? ' hecho' : '') + '"><h4><b>1</b> Lo que le pedimos <em>· ¿lo hizo?</em></h4>' +
-      '<div class="pedido' + (g.accion_acordada ? '' : ' vacia') + '">' +
-        (g.accion_acordada ? esc(g.accion_acordada) : 'La semana pasada no se le pidió nada.') + '</div>' +
-      (av.length ? '<div class="avances" style="margin-top:9px"><b>Lo que anotó ' + esc(g.corto) + ' esta semana</b>' +
-        av.map(a => '<p>' + esc(a.texto) + ' <span class="cuando">· ' + fmtF(a.fecha) + '</span></p>').join('') + '</div>' : '') +
-      (g.accion_acordada ? '<div class="campo" style="margin-top:9px"><label><b>¿Cumplida?</b></label>' + seg('cumplida', ['Sí','Parcial','No']) + '</div>' +
-        '<div class="campo"><label>Evidencia — <b>qué pasó concretamente</b> (números, respuestas, capturas)</label>' +
-        ta('evidencia', 'ej: mandó 12 mensajes, contestaron 3, 1 pasó a cotización', g.cumplida && !(g.evidencia||'').trim()) + '</div>' : '') +
-    '</div>' +
-
+      C.pedido + '</div>' +
     '<div class="paso' + (pa.p2 ? ' hecho' : '') + '"><h4><b>2</b> Los números de la semana <em>· reales, no estimados</em></h4>' +
-      '<div class="numeros">' +
-        '<div class="campo"><label>Fichas</label>' + inp('fichas', '0', false) + '</div>' +
-        '<div class="campo"><label>Facturación USD</label>' + inp('facturacion', '0', false) + '</div>' +
-        '<div class="campo"><label>Rentabilidad USD</label>' + inp('rentabilidad', '0', false) + '</div></div>' +
-      '<div class="campo" style="margin-top:4px"><label><b>¿Usó Chatwoot?</b> — si trabaja por fuera, no se puede medir</label>' +
-        seg('chatwoot_ok', ['Sí','No']) + '</div>' +
-    '</div>' +
-
+      C.numeros + '</div>' +
     '<div class="paso' + (pa.p3 ? ' hecho' : '') + '"><h4><b>3</b> Lo que le pedimos ahora <em>· se evalúa la semana que viene</em></h4>' +
-      '<div class="campo"><label><b>Acción para esta semana</b> — concreta y medible</label>' +
-        ta('accion_proxima', 'ej: contactar a los 15 de la lista de verano y traer las respuestas', !g.accion_proxima) + '</div>' +
-      '<div class="campo"><label>¿Qué necesita de nosotros? <b>Si siempre queda vacío, esto es una auditoría</b></label>' +
-        inp('bloqueo', 'ej: necesita el PDF de preventa aprobado', false) + '</div>' +
-      '<div class="campo"><label>Foco del mes</label>' +
-        '<input data-f="foco" value="' + esc(g.foco || '') + '" placeholder="el objetivo del ciclo"' + dis + '></div>' +
-    '</div>' +
+      C.proxima + C.foco + '</div>' +
 
     '<div class="paso" style="background:#fcfcfc;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
       (pa.falta.length ? '<span style="font-size:12.5px;color:var(--medio)">Falta: <strong>' +
         pa.falta.map(esc).join(' · ') + '</strong></span>'
         : '<span style="font-size:12.5px;color:var(--ok)">✓ Semana cerrada</span>') +
-      '<button class="btn chico sec" data-ir="' + g.vendedor_id + '" style="margin-left:auto">Ver la 1a1 →</button></div>' +
+      '<button class="btn chico sec" data-ir="' + g.vendedor_id + '" style="margin-left:auto">Abrir la 1a1 →</button></div>' +
   '</div>';
 }
-function engancharTarjetas() {
-  $$('.tarj').forEach(t => {
-    const vid = t.dataset.vend;
-    if (!puedoEditar(vid)) return;
-    t.querySelectorAll('[data-f]').forEach(el => {
-      const f = el.dataset.f;
-      if (el.tagName === 'BUTTON') el.onclick = () =>
-        guardarCelda(vid, { [f]: el.classList.contains('on') ? null : el.dataset.v });
-      else el.onchange = () => {
-        if (f === 'foco') return guardarFoco(vid, el.value);
-        const num = ['fichas','facturacion','rentabilidad'].includes(f);
-        guardarCelda(vid, { [f]: num ? numOnull(el.value) : el.value });
-      };
-    });
+// Engancha los campos de la semana estén donde estén: en la tarjeta del lunes o adentro de la 1a1.
+function engancharCampos(raiz, vid, cod) {
+  if (!raiz || !puedoEditar(vid)) return;
+  raiz.querySelectorAll('[data-f]').forEach(el => {
+    const f = el.dataset.f;
+    if (el.tagName === 'BUTTON') el.onclick = () =>
+      guardarCelda(vid, { [f]: el.classList.contains('on') ? null : el.dataset.v }, cod);
+    else el.onchange = () => {
+      if (f === 'foco') return guardarFoco(vid, el.value);
+      const num = ['fichas','facturacion','rentabilidad'].includes(f);
+      guardarCelda(vid, { [f]: num ? numOnull(el.value) : el.value }, cod);
+    };
   });
+}
+function engancharTarjetas() {
+  $$('.tarj').forEach(t => engancharCampos(t, t.dataset.vend, SEMANA));
   $$('[data-ir]').forEach(b => b.onclick = async () => {
     $('#rVend').value = b.dataset.ir; RSEL = null;
     if (!D.reuniones) await cargarReuniones();
@@ -869,29 +886,59 @@ function pintarReunion() {
     (editable ? ' Arrancá con «+ Nueva 1a1».' : '') + '</div>'; $('#rInfo').textContent = ''; return; }
   const idx = R.indexOf(r), ant = R[idx + 1] || null, pAnt = ant ? puntaje(ant.id) : null;
   const compsAnt = ant ? compsDe(ant.id) : [];
+
+  // 🔑 La semana se carga ACÁ, con el vendedor delante, y no como tarea administrativa para
+  // después. Es el diagnóstico de por qué en S2 se cargó 1 fila de 14: la reunión y la carga
+  // estaban en pestañas distintas. La semana es la que contiene la fecha de la reunión.
+  const s = D.semanas.find(x => r.fecha >= x.desde && r.fecha <= x.hasta);
+  const g = s ? (D.grilla.find(x => x.vendedor_id === vid && x.ciclo_id === s.ciclo_id && x.codigo === s.codigo) || {}) : {};
+  const C = s ? camposSemana(Object.assign({ vendedor_id: vid, ciclo_id: s.ciclo_id,
+    corto: (D.vById[vid] || {}).corto }, g), s.codigo) : null;
+  const pa = s ? pasos(g, s.hasta < HOY) : null;
+
   $('#rInfo').textContent = '1a1 ' + (R.length - idx) + ' de ' + R.length + ' · ' + (r.encargado || '') +
     (editable ? '' : ' · solo lectura');
   $('#reuBody').innerHTML =
+    (s ? '<div class="aviso' + (pa.hechos === 3 ? ' ok' : '') + '">Esta 1a1 cae en <strong>' +
+      esc((D.ciclos.find(c => c.id === s.ciclo_id) || {}).nombre || '') + ' · ' + esc(s.codigo) + '</strong> (' +
+      fmtF(s.desde) + ' al ' + fmtF(s.hasta) + '). Lo que cargues acá <strong>es</strong> la semana: no hay que ' +
+      'volver a escribirlo en ningún lado. ' + (pa.hechos === 3 ? '<strong>Ya está cerrada.</strong>'
+        : 'Falta: <strong>' + pa.falta.map(esc).join(' · ') + '</strong>.') + '</div>'
+      : '<div class="aviso rojo">La fecha de esta 1a1 <strong>no cae dentro de ninguna semana del plan</strong>, ' +
+        'así que lo que se cargue no se puede imputar. Corregí la fecha o creá el ciclo que falta.</div>') +
+
     '<div class="momento"><h3><span class="n">1</span> Qué habíamos acordado ' + (ant ? 'el ' + fmtF(ant.fecha) : '') +
       (pAnt !== null && compsAnt.some(c => c.estado) ? '<span class="pill ' +
         (pAnt >= .8 ? 'pSi' : pAnt >= .4 ? 'pParcial' : 'pNo') + '" style="margin-left:auto">cumplió ' +
         Math.round(pAnt * 100) + '%</span>' : '') + '</h3><div class="in">' +
       (compsAnt.length ? compsAnt.map(c => fichaComp(c, editable)).join('')
         : '<div class="vacio">' + (ant ? 'La 1a1 anterior no dejó compromisos escritos.' : 'Es la primera 1a1 registrada.') + '</div>') +
-      (ant && ant.repaso ? '<div class="aviso" style="margin:11px 0 0">Del memo: ' + esc(ant.repaso) + '</div>' : '') + '</div></div>' +
-    '<div class="momento"><h3><span class="n">2</span> Qué se habló</h3><div class="in">' +
+      (ant && ant.repaso ? '<div class="aviso" style="margin:11px 0 0">Del memo: ' + esc(ant.repaso) + '</div>' : '') +
+      (C ? '<div id="semPedido" style="margin-top:12px;border-top:1px dashed var(--borde);padding-top:12px">' +
+        '<div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--vino);margin-bottom:8px">' +
+        'La acción de la semana · ¿la hizo?</div>' + C.pedido + '</div>' : '') + '</div></div>' +
+
+    (C ? '<div class="momento"><h3><span class="n">2</span> Los números de la semana ' +
+      '<span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;font-size:11.5px;opacity:.85">reales, no estimados</span></h3>' +
+      '<div class="in" id="semNumeros">' + C.numeros + '</div></div>' : '') +
+
+    '<div class="momento"><h3><span class="n">3</span> Qué se habló</h3><div class="in">' +
       '<textarea id="notas" placeholder="El contexto, el coaching, lo que hay que tener en cuenta…"' +
       (editable ? '' : ' disabled') + '>' + esc(r.notas || '') + '</textarea>' +
-      '<div class="aviso" style="margin:11px 0 0">Los números y la evaluación van en <strong>Esta semana</strong>. ' +
-      'Acá va lo cualitativo, que el vendedor no ve.</div></div></div>' +
-    '<div class="momento"><h3><span class="n">3</span> Qué se compromete para la próxima</h3><div class="in">' +
+      '<div class="aviso" style="margin:11px 0 0">Esto es lo cualitativo y <strong>el vendedor no lo ve</strong>. ' +
+      'Lo que sí ve son sus compromisos y la acción de la semana.</div></div></div>' +
+
+    '<div class="momento"><h3><span class="n">4</span> Qué se compromete para la próxima</h3><div class="in">' +
       (compsDe(r.id).length ? compsDe(r.id).map(c => fichaComp(c, editable)).join('') : '<div class="vacio">Todavía no hay compromisos.</div>') +
       (editable ? '<div class="nuevo"><input class="q" id="ncTxt" placeholder="Qué se compromete a hacer — concreto y medible">' +
         '<input id="ncQuien" placeholder="quién" style="width:105px" value="' + esc((D.vById[vid] || {}).corto || '') + '">' +
         '<input type="date" id="ncVence"><button class="btn" id="ncAdd">Agregar</button></div>' +
         '<div class="nuevo"><button class="btn sec" id="aSemana">Pasar estos compromisos a «Acción para esta semana» →</button>' +
         '<span class="cnt">' + (r.fuente === 'app' ? '1a1 creada acá' : 'viene del memo del ' + fmtF(r.fecha)) + '</span></div>' : '') +
+      (C ? '<div id="semProxima" style="margin-top:12px;border-top:1px dashed var(--borde);padding-top:12px">' + C.proxima + '</div>' : '') +
     '</div></div>';
+
+  if (s) ['#semPedido', '#semNumeros', '#semProxima'].forEach(x => engancharCampos($(x), vid, s.codigo));
   if (editable) {
     $('#notas').onchange = async e => {
       const { error } = await sb.from('reuniones').update({ notas: e.target.value }).eq('id', r.id);
@@ -906,7 +953,10 @@ function pintarReunion() {
       if (error) return fallo(error, 'agregando el compromiso');
       await cargarReuniones(); toast('Compromiso agregado'); pintarReunion();
     };
-    $('#aSemana').onclick = () => guardarCelda(vid, { accion_proxima: compsDe(r.id).map(c => c.texto).join(' · ') });
+    // Se imputa a la semana de ESTA reunión, no a la que esté elegida arriba.
+    $('#aSemana').onclick = () => s
+      ? guardarCelda(vid, { accion_proxima: compsDe(r.id).map(c => c.texto).join(' · ') }, s.codigo)
+      : toast('La fecha de esta 1a1 no cae en ninguna semana del plan', true);
   }
   engancharComps(editable);
 }
