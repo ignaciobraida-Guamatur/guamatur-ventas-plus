@@ -23,7 +23,7 @@ nav button.on{opacity:1;border-bottom-color:#fff;font-weight:600}
 h2{font-size:15px;margin:26px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--rojo)}
 h2:first-child{margin-top:0}
 h2 small{font-weight:400;color:var(--suave);font-size:12px;margin-left:8px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:15px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin-bottom:15px}
 .kpi{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:11px 13px}
 .kpi .v{font-size:24px;font-weight:700;color:var(--rojo);line-height:1.15}
 .kpi .l{font-size:10.5px;color:var(--suave);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
@@ -48,7 +48,7 @@ textarea{width:100%;resize:vertical;min-height:54px;line-height:1.5}
 .aviso.info{background:#eff6ff;border-color:#bfdbfe}
 
 /* ── tarjeta de la semana, en tres pasos ── */
-.grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(470px,1fr));gap:13px}
+.grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(470px,100%),1fr));gap:13px}
 .tarj{background:#fff;border:1px solid var(--borde);border-radius:11px;overflow:hidden;display:flex;flex-direction:column}
 .tarj.falta{border-left:5px solid var(--medio)}
 .tarj.urgente{border-left:5px solid var(--mal)}
@@ -85,7 +85,7 @@ textarea{width:100%;resize:vertical;min-height:54px;line-height:1.5}
 .seg button:disabled{cursor:not-allowed;opacity:.55}
 .seg button[data-v="Sí"].on{background:var(--ok)}.seg button[data-v="Parcial"].on{background:var(--medio)}
 .seg button[data-v="No"].on{background:var(--mal)}
-.numeros{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px}
+.numeros{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(120px,100%),1fr));gap:9px}
 .avances{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 11px;margin-bottom:9px;font-size:12.5px}
 .avances b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#475569;margin-bottom:4px}
 .avances p{margin:0 0 4px;color:#334155}
@@ -108,7 +108,7 @@ td.editable{background:var(--amarillo)}
 .linea{height:6px;border-radius:4px;overflow:hidden;background:var(--gris);min-width:60px}
 .linea i{display:block;height:100%}
 /* evolución */
-.evo{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.evo{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:12px}
 .evoc{background:#fff;border:1px solid var(--borde);border-radius:11px;padding:13px 15px}
 .evoc h4{margin:0 0 2px;font-size:14.5px}
 .evoc .q{font-size:11.5px;color:var(--suave);margin-bottom:11px}
@@ -138,7 +138,7 @@ details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
 .est button[data-e="Hecho"].on{background:var(--ok)}.est button[data-e="Parcial"].on{background:var(--medio)}
 .est button[data-e="No hecho"].on{background:var(--mal)}
 .nuevo{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--borde)}
-.nuevo input.q{flex:1;min-width:250px}
+.nuevo input.q{flex:1;min-width:min(250px,100%)}
 #login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--rojo);padding:24px}
 #login .caja{background:#fff;border-radius:14px;padding:34px 30px;max-width:400px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.18)}
 #login img{height:34px;margin-bottom:18px}
@@ -153,6 +153,18 @@ details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;
   padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:99}
 #toast.ver{opacity:.95}#toast.mal{background:var(--mal)}
+
+/* teléfono: Nacho y Rosina esto lo miran caminando */
+@media (max-width:640px){
+  body{overflow-x:hidden}
+  .wrap{padding:14px 12px 80px}
+  header{padding:10px 12px;gap:10px}
+  header .ctrl{gap:6px;width:100%;margin-left:0}
+  nav{padding:0 12px}
+  .kpi .v{font-size:20px}
+  #q{min-width:100%}
+  h2{margin:20px 0 9px}
+}
 </style></head><body>
 
 <div id="login" style="display:none"><div class="caja">
@@ -170,6 +182,17 @@ details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
   <p id="sinaccesoMail" style="color:var(--suave);font-size:13px"></p>
   <p style="color:var(--suave);font-size:13px">Pedile a Nacho o a Rosina que te den de alta en el Plan Ventas+.</p>
   <button class="btn sec" id="btnSalir2">Salir</button>
+</div></div></div>
+
+<div id="sindatos" style="display:none"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--rojo);padding:24px">
+  <div class="caja" style="background:#fff;border-radius:14px;padding:34px 30px;max-width:440px;text-align:center">
+  <img src="logo-color.svg" alt="Guamatur" style="height:34px;margin-bottom:18px">
+  <h1 style="font-size:19px;margin:0 0 6px">El plan todavía no está armado</h1>
+  <p id="sindatosQue" style="color:var(--suave);font-size:13px"></p>
+  <p style="color:var(--suave);font-size:13px">Los ciclos y sus semanas se cargan en la base
+  (migración <strong>003-seed.sql</strong>); el plantel también se puede dar de alta desde
+  <strong>Equipo y accesos</strong> una vez que haya un ciclo. Avisale a Nacho.</p>
+  <button class="btn sec" id="btnSalir3">Salir</button>
 </div></div></div>
 
 <div id="app" style="display:none">
@@ -229,6 +252,7 @@ details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
   Quién está siguiendo a su gente, si el programa mueve los números, y qué tiene que destrabar la empresa.</div>
   <div class="kpis" id="progKpis"></div>
   <div class="barra"><span id="progTit" style="font-weight:600"></span>
+    <button class="btn sec" id="expProg">Bajar el ciclo en CSV</button>
     <span class="cnt" id="progCnt"></span></div>
 
   <h2>Por encargado <small>la célula, no el vendedor suelto</small></h2>
@@ -287,7 +311,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
   OAUTH_DOMINIO: 'guamatur.com',
-  VERSION: 'v5',
+  VERSION: 'v6',
 };
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   db: { schema: 'ventasplus' },
@@ -322,7 +346,7 @@ const fallo = (e, donde) => { console.error(donde, e);
 $('#btnLogin').onclick = () => sb.auth.signInWithOAuth({ provider: 'google',
   options: { redirectTo: location.href.split('#')[0], queryParams: { hd: CONFIG.OAUTH_DOMINIO } } });
 const salir = async () => { try { await sb.auth.signOut({ scope: 'local' }); } catch (e) {} location.reload(); };
-$('#btnSalir').onclick = salir; $('#btnSalir2').onclick = salir;
+$('#btnSalir').onclick = salir; $('#btnSalir2').onclick = salir; $('#btnSalir3').onclick = salir;
 
 // Las pestañas responden PREGUNTAS, no objetos. Una por momento de uso:
 // cargo la semana → estoy en la reunión → miro a fulano en el tiempo → ¿esto funciona?
@@ -343,6 +367,14 @@ async function arrancar() {
   }
   YO = perfil;
   await cargar();
+  // Instalación nueva o ciclo borrado: sin esto la app se queda en «Cargando…» sin decir nada.
+  if (!D.ciclos.length || !D.vendedores.length) {
+    $('#cargando').style.display = 'none'; $('#sindatos').style.display = 'block';
+    $('#sindatosQue').textContent = !D.ciclos.length
+      ? 'Todavía no hay ningún ciclo con sus semanas cargado.'
+      : 'Hay ciclos, pero no hay ningún vendedor activo en el plan.';
+    return;
+  }
   $('#cargando').style.display = 'none'; $('#app').style.display = 'block';
   $('#yo').textContent = perfil.nombre + (esDireccion() ? ' · dirección' : esVendedor() ? ' · vendedor' : '');
   $('#subtitulo').textContent = esVendedor()
@@ -353,18 +385,27 @@ async function arrancar() {
     '<button data-v="' + v[0] + '">' + v[1] + '</button>').join('');
   $$('#nav button').forEach(b => b.onclick = () => irA(b.dataset.v));
   if (esDireccion()) { $('#btnConfig').style.display = ''; $('#btnConfig').onclick = () => irA('equipo'); }
-  await irA(vistas[0][0]);
+  // Cada uno entra donde estaba. Nacho vive en «Esta semana» y Rosina en «El programa»:
+  // mandarlos a los dos a la misma pantalla obliga a uno de los dos a navegar todos los días.
+  const ultima = recordar();
+  await irA(vistas.some(v => v[0] === ultima) ? ultima : vistas[0][0]);
   medirTope();
 }
 
 // Una sola puerta para cambiar de vista: la usan el nav, el engranaje y los botones «ir a».
 // «equipo» no está en el nav (es configuración), así que la vista activa se lee del DOM, no del nav.
+// La última pestaña usada, por persona y por navegador. Si el navegador la bloquea, no pasa nada.
+const CLAVE_VISTA = 'guamatur-ventasplus-vista';
+const recordar = () => { try { return localStorage.getItem(CLAVE_VISTA) || ''; } catch (e) { return ''; } };
+const anotar = v => { try { localStorage.setItem(CLAVE_VISTA, v); } catch (e) {} };
+
 async function irA(v) {
   // Quien manda es la RLS del schema (un vendedor solo lee lo suyo, esté donde esté), pero
   // tampoco tiene por qué ver el ARMADO de una vista de gestión: acá no se dibuja.
   const permitidas = (esVendedor() ? VISTAS_VEND : VISTAS_RESP).map(x => x[0])
     .concat(esDireccion() ? ['equipo'] : []);
   if (!permitidas.includes(v)) return;
+  if (v !== 'equipo') anotar(v);      // el engranaje es de paso: no se vuelve a él al entrar
   $$('.vista').forEach(x => x.classList.toggle('on', x.id === 'v-' + v));
   $$('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   $('#btnConfig').classList.toggle('abierto', v === 'equipo');
@@ -427,7 +468,8 @@ async function cargarReuniones() {
 }
 
 const semanasDe = cid => D.semanas.filter(s => s.ciclo_id === cid);
-const semActual = () => semanasDe(CICLO).find(s => s.codigo === SEMANA) || semanasDe(CICLO)[0];
+// El `|| {}` no es paranoia: si un ciclo se queda sin semanas, sin esto la app muere en blanco.
+const semActual = () => semanasDe(CICLO).find(s => s.codigo === SEMANA) || semanasDe(CICLO)[0] || {};
 const cel = (vid, cid, cod) => D.grilla.find(g => g.vendedor_id === vid && g.ciclo_id === cid && g.codigo === cod) || {};
 const puedoEditar = vid => esDireccion() || (D.vById[vid] || {}).encargado_email === YO.email;
 const avancesDe = (vid, cid, cod) => (D.avances || []).filter(a =>
@@ -663,11 +705,7 @@ $('#expCsv').onclick = () => {
     g.cumplida || '', g.evidencia || '', g.fichas == null ? '' : g.fichas,
     g.facturacion == null ? '' : g.facturacion, g.rentabilidad == null ? '' : g.rentabilidad,
     g.chatwoot_ok || '', g.bloqueo || '', g.accion_proxima || '']);
-  const csv = [COLS].concat(filas).map(r => r.map(x =>
-    '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'ventas-plus-' + CICLO + '-' + SEMANA + '.csv'; a.click();
+  bajarCsv('ventas-plus-' + CICLO + '-' + SEMANA + '.csv', COLS, filas);
 };
 
 // ══ 3 · EL DETALLE POR VENDEDOR (dentro de «El programa») ═══════════════════
@@ -1104,6 +1142,10 @@ function pintarPrograma() {
   // Solo se juzga una semana que YA TERMINÓ. Reclamarle a alguien la semana en curso un lunes
   // a la mañana es la forma más rápida de que la herramienta pierda autoridad.
   const vencidas = sems.filter(s => s.hasta < HOY);
+  // Para las 1a1 la ventana es otra: la semana en curso cuenta en el numerador (la reunión
+  // puede haber sido hoy), así que también tiene que contar en el denominador.
+  const empezadas = sems.filter(s => s.desde <= HOY);
+  const hastaHoy = empezadas.length ? empezadas[empezadas.length - 1].hasta : c.desde;
   const sSel = semActual();
   const enCurso = sSel.desde <= HOY && HOY <= sSel.hasta;
   const delCiclo = D.grilla.filter(g => g.ciclo_id === CICLO);
@@ -1131,8 +1173,8 @@ function pintarPrograma() {
     gr.fichas   = res.reduce((a, r) => a + Number(r.fichas_mes || 0), 0);
     gr.esperado = conBase.length ? conBase.reduce((a, r) => a + Number(r.base_al_ritmo), 0) : null;
     gr.cargaron = conBase.length;                       // sobre cuántos vendedores se calculó
-    gr.reus     = reus.filter(r => ids.includes(r.vendedor_id) && enRango(r.fecha, c.desde, c.hasta)).length;
-    gr.reusEsp  = gr.vends.length * vencidas.length;
+    gr.reus     = reus.filter(r => ids.includes(r.vendedor_id) && enRango(r.fecha, c.desde, hastaHoy)).length;
+    gr.reusEsp  = gr.vends.length * empezadas.length;
     gr.pidieron = ids.filter(id => delCiclo.some(x => x.vendedor_id === id && (x.bloqueo || '').trim())).length;
   });
   grupos.sort((a, b) => b.vends.length - a.vends.length);
@@ -1151,6 +1193,7 @@ function pintarPrograma() {
   const N = D.vendedores.length;
   const cargaron = T('cargaron');
   const cobertura = N ? cargaron / N : 0;
+  const conBase = (D.base || []).filter(b => b.fichas_mes != null).length;
   const conCob = (val, n) => val == null ? '<span class="chip">sin cargar</span>'
     : Math.round(val * 10) / 10 + ' <span class="chip" style="margin-left:4px">' + n + ' de ' + N + '</span>';
 
@@ -1194,7 +1237,7 @@ function pintarPrograma() {
   };
   $('#progEncargados').innerHTML = '<table><thead><tr><th>Responsable</th><th class="num">Vendedores</th>' +
     '<th class="num">Semanas cerradas</th><th>% cumplimiento</th><th class="num">Fichas</th>' +
-    '<th class="num">Esperado</th><th class="num">Desvío</th><th class="num">1a1 del ciclo</th>' +
+    '<th class="num">Esperado</th><th class="num">Desvío</th><th class="num">1a1 hasta hoy</th>' +
     '<th class="num">Pidieron apoyo</th></tr></thead><tbody>' +
     grupos.map(g => {
       const flojo = g.celdas && g.cerradas / g.celdas < .5;
@@ -1220,12 +1263,19 @@ function pintarPrograma() {
       dvCel(T('fichas'), espT, cargaron, N) +
       '<td class="num">' + T('reus') + '/' + T('reusEsp') + '</td>' +
       '<td class="num">' + T('pidieron') + '/' + N + '</td></tr></tbody></table>' +
-    (cobertura < .5
-      ? '<div class="aviso rojo" style="margin-top:12px"><strong>Ojo con leer el desvío todavía: ' +
-        cargaron + ' de ' + N + ' cargaron fichas en este ciclo.</strong> Cada número de la columna es cierto ' +
-        'para quien cargó, pero el total no representa al plan. Mientras la carga no suba, la pregunta útil ' +
-        'no es «¿mejoramos los números?» sino «¿por qué no se está cargando?».</div>'
-      : '') +
+    // Dos causas distintas para la misma columna vacía. Señalar la equivocada manda a
+    // Gerencia a apretar a la gente cuando lo que falta es un dato que carga Gerencia.
+    (conBase === 0
+      ? '<div class="aviso rojo" style="margin-top:12px"><strong>Falta la línea de base: sin ella no hay ' +
+        '«esperado» ni desvío.</strong> Es el promedio mensual de cada vendedor antes del plan, y se carga ' +
+        'una sola vez desde el engranaje ⚙. Hasta que esté, la herramienta puede decir cuánta actividad hubo, ' +
+        'pero no si el programa mejoró los números.</div>'
+      : cobertura < .5
+        ? '<div class="aviso rojo" style="margin-top:12px"><strong>Ojo con leer el desvío todavía: ' +
+          cargaron + ' de ' + N + ' tienen fichas cargadas en este ciclo.</strong> Cada número de la columna ' +
+          'es cierto para quien cargó, pero el total no representa al plan. Mientras la carga no suba, la ' +
+          'pregunta útil no es «¿mejoramos los números?» sino «¿por qué no se está cargando?».</div>'
+        : '') +
     '<div class="aviso info" style="margin-top:12px"><strong>Cómo leer esta tabla.</strong> ' +
       '«Semanas cerradas» cuenta solo las semanas <strong>que ya terminaron</strong> — a nadie se le reclama ' +
       'la semana en curso — y una semana está cerrada cuando tiene los tres pasos completos, la misma regla ' +
@@ -1266,15 +1316,54 @@ function pintarPrograma() {
     ? '<div class="aviso rojo"><strong>Ningún vendedor pidió nada en todo el ciclo.</strong> Eso casi nunca ' +
       'quiere decir que no necesiten nada: quiere decir que el programa se está viviendo como una auditoría ' +
       'y no como acompañamiento. Es lo primero para corregir.</div>'
-    : '<div class="scrollx"><table><thead><tr><th>Semana</th><th>Vendedor</th><th>Responsable</th>' +
-      '<th>Qué necesita</th></tr></thead><tbody>' +
-      bloqueos.map(x => '<tr><td>' + esc(x.codigo) + ' <span style="color:var(--suave)">' + fmtF(x.desde) + '</span></td>' +
-        '<td><strong>' + esc(x.corto) + '</strong></td><td>' + esc(x.encargado) + '</td>' +
-        '<td>' + esc(x.bloqueo) + '</td></tr>').join('') + '</tbody></table></div>';
+    : (function () {
+        // Si varios piden lo mismo, eso es UNA decisión de la empresa, no N renglones sueltos.
+        const rep = {};
+        bloqueos.forEach(x => {
+          const k = (x.bloqueo || '').trim().toLowerCase();
+          (rep[k] = rep[k] || { texto: x.bloqueo.trim(), quienes: [] }).quienes.push(x.corto);
+        });
+        const juntos = Object.values(rep).filter(r => new Set(r.quienes).size > 1)
+          .sort((a, b) => b.quienes.length - a.quienes.length);
+        return (juntos.length
+          ? '<div class="aviso rojo"><strong>Lo mismo lo piden varios — eso se resuelve una vez:</strong> ' +
+            juntos.map(r => '«' + esc(r.texto) + '» (' + [...new Set(r.quienes)].map(esc).join(', ') + ')').join(' · ') +
+            '</div>'
+          : '') +
+          '<div class="scrollx"><table><thead><tr><th>Semana</th><th>Vendedor</th><th>Responsable</th>' +
+          '<th>Qué necesita</th></tr></thead><tbody>' +
+          bloqueos.map(x => '<tr><td>' + esc(x.codigo) + ' <span style="color:var(--suave)">' + fmtF(x.desde) + '</span></td>' +
+            '<td><strong>' + esc(x.corto) + '</strong></td><td>' + esc(x.encargado) + '</td>' +
+            '<td>' + esc(x.bloqueo) + '</td></tr>').join('') + '</tbody></table></div>';
+      })();
 
   // ── 4 · El detalle, vendedor por vendedor, y la línea de base ─────────────
   pintarMensual();
 }
+
+// El ciclo entero en una planilla: es lo que va al memo del martes, y lo que la planilla
+// de Rosina daba de arranque. Sin esto la app obligaría a copiar números a mano.
+function bajarCsv(nombre, cols, filas) {
+  const csv = [cols].concat(filas).map(r => r.map(x =>
+    '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = nombre; a.click();
+}
+$('#expProg').onclick = () => {
+  const sems = semanasDe(CICLO);
+  const cols = ['Vendedor', 'Encargado'].concat(sems.map(s => 'Fichas ' + s.codigo))
+    .concat(['Fichas del ciclo', 'Facturación', 'Rentabilidad', '% cumplimiento',
+             'Semanas sin Chatwoot', 'Semanas con pedido', 'Base / mes', 'Esperado a esta altura', 'Desvío']);
+  const filas = D.resumen.filter(r => r.ciclo_id === CICLO)
+    .sort((a, b) => a.vend_orden - b.vend_orden)
+    .map(r => [r.corto, r.encargado]
+      .concat(sems.map(s => cel(r.vendedor_id, CICLO, s.codigo).fichas ?? ''))
+      .concat([r.fichas_mes, r.facturacion_mes, r.rentabilidad_mes, r.pct_cumplimiento ?? '',
+               r.semanas_sin_chatwoot, r.semanas_con_pedido,
+               r.fichas_base ?? '', r.base_al_ritmo ?? '', r.desvio_vs_base ?? '']));
+  bajarCsv('ventas-plus-' + CICLO + '-ciclo.csv', cols, filas);
+};
 
 // ── Pintar ───────────────────────────────────────────────────────────────────
 function pintar() {
