@@ -1,0 +1,738 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ventas+ · Seguimiento semanal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
+<style>
+:root{--rojo:#cd0039;--vino:#981632;--tinta:#18181b;--gris:#f4f4f5;--borde:#e4e4e7;--suave:#71717a;
+      --ok:#16a34a;--medio:#d97706;--mal:#dc2626;--amarillo:#fdf3d7}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:var(--tinta);background:#fafafa}
+header{background:var(--rojo);color:#fff;padding:12px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:30}
+header img{height:24px}
+.tit{font-size:15.5px;font-weight:600}.sub{opacity:.85;font-size:11.5px}
+header .ctrl{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;flex-wrap:wrap}
+header select{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:7px;padding:5px 9px;font:inherit;font-size:12.5px}
+header select option{color:#18181b}
+header .yo{font-size:12px;opacity:.9;border-left:1px solid rgba(255,255,255,.35);padding-left:12px}
+header .salir{background:none;border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:6px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer}
+nav{display:flex;gap:2px;background:var(--vino);padding:0 22px;position:sticky;top:var(--hHeader,52px);z-index:29;overflow-x:auto}
+nav button{background:none;border:0;color:#fff;opacity:.72;padding:10px 15px;font:inherit;font-size:13.5px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{opacity:1;border-bottom-color:#fff;font-weight:600}
+.wrap{max-width:1600px;margin:0 auto;padding:18px 22px 80px}
+.vista{display:none}.vista.on{display:block}
+h2{font-size:15px;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--rojo)}
+h2:first-child{margin-top:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:15px}
+.kpi{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:11px 13px}
+.kpi .v{font-size:24px;font-weight:700;color:var(--rojo);line-height:1.15}
+.kpi .l{font-size:10.5px;color:var(--suave);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+.kpi.alerta .v{color:var(--mal)}.kpi.bien .v{color:var(--ok)}
+.barra{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:13px;background:#fff;border:1px solid var(--borde);border-radius:10px;padding:10px 13px}
+input,select,textarea{font:inherit;padding:6px 9px;border:1px solid var(--borde);border-radius:7px;background:#fff;color:var(--tinta)}
+input:disabled,textarea:disabled,select:disabled{background:#f6f6f7;color:#8a8a90;cursor:not-allowed}
+textarea{width:100%;resize:vertical;min-height:58px;line-height:1.5}
+.btn{background:var(--rojo);color:#fff;border:0;border-radius:7px;padding:7px 13px;font:inherit;font-size:13px;cursor:pointer}
+.btn:hover{background:var(--vino)}.btn:disabled{background:#c9c9ce;cursor:not-allowed}
+.btn.sec{background:#fff;color:var(--tinta);border:1px solid var(--borde)}.btn.sec:hover{background:var(--gris)}
+.btn.chico{padding:4px 9px;font-size:12px}
+.cnt{margin-left:auto;font-size:12.5px;color:var(--suave)}
+.aviso{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 13px;font-size:12.5px;margin-bottom:13px}
+.aviso.rojo{background:#fef2f2;border-color:#fecaca}.aviso.ok{background:#f0fdf4;border-color:#bbf7d0}
+.grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(455px,1fr));gap:12px}
+.tarj{background:#fff;border:1px solid var(--borde);border-radius:11px;overflow:hidden;display:flex;flex-direction:column}
+.tarj.rojo{border-left:5px solid var(--mal)}.tarj.ambar{border-left:5px solid var(--medio)}.tarj.verde{border-left:5px solid var(--ok)}
+.tarj.ajeno{opacity:.82;background:#fcfcfd}
+.tarj .cab{padding:11px 14px 9px;border-bottom:1px solid var(--borde)}
+.tarj .nom{font-size:15px;font-weight:700}
+.tarj .meta{font-size:11px;color:var(--suave)}
+.tarj .cuerpo{padding:11px 14px;flex:1}
+.tarj .pie{padding:9px 14px;background:#fcfcfc;border-top:1px solid var(--borde);display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.blq{margin-bottom:10px}
+.blq>label{display:block;font-size:10px;color:var(--vino);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:3px}
+.blq input,.blq textarea{width:100%;font-size:12.5px}.blq textarea{min-height:42px}
+.pedido{background:var(--gris);border-radius:7px;padding:7px 10px;font-size:12.5px}
+.pedido.vacia{color:var(--suave);font-style:italic}
+.vacio{color:var(--suave);font-size:12.5px;font-style:italic;padding:5px 0}
+.seg{display:flex;gap:3px}
+.seg button{border:1px solid var(--borde);background:#fff;border-radius:6px;cursor:pointer;font-size:12px;padding:4px 11px;color:var(--suave)}
+.seg button.on{color:#fff;border-color:transparent;font-weight:700}
+.seg button:disabled{cursor:not-allowed;opacity:.6}
+.seg button[data-v="Sí"].on{background:var(--ok)}.seg button[data-v="Parcial"].on{background:var(--medio)}
+.seg button[data-v="No"].on{background:var(--mal)}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+.pSi{background:#dcfce7;color:#166534}.pParcial{background:#fef3c7;color:#92400e}
+.pNo{background:#fee2e2;color:#991b1b}.pAbierto{background:#e0e7ff;color:#3730a3}
+.chip{display:inline-block;background:var(--gris);border-radius:6px;padding:2px 8px;font-size:11px;margin-right:4px;color:var(--suave)}
+.scrollx{overflow-x:auto;padding-bottom:4px}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--borde);border-radius:10px;font-size:12.5px}
+th{background:var(--vino);color:#fff;text-align:left;padding:8px 9px;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;vertical-align:bottom}
+th:first-child{border-top-left-radius:10px}th:last-child{border-top-right-radius:10px}
+td{padding:6px 9px;border-top:1px solid var(--borde);vertical-align:top}
+tr:hover td{background:#fdf7f9}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.total td{background:var(--gris);font-weight:700;border-top:2px solid var(--vino)}
+td input,td select{width:100%;font-size:12px;padding:3px 6px;border-color:#ececef}
+td.editable{background:var(--amarillo)}
+.linea{height:6px;border-radius:4px;overflow:hidden;background:var(--gris);min-width:60px}
+.linea i{display:block;height:100%}
+.tl{border-left:2px solid var(--borde);margin-left:8px;padding-left:16px}
+.tl .ev{position:relative;padding-bottom:15px}
+.tl .ev:before{content:"";position:absolute;left:-23px;top:4px;width:11px;height:11px;border-radius:50%;background:var(--rojo);border:2px solid #fff;box-shadow:0 0 0 1px var(--borde)}
+.tl .f{font-size:11.5px;color:var(--suave)}.tl .t{font-weight:600;font-size:13.5px}
+details{background:#fff;border:1px solid var(--borde);border-radius:9px;padding:8px 12px;margin-bottom:7px}
+summary{cursor:pointer;font-size:12.5px;font-weight:600}
+details p{font-size:12.5px;color:#3f3f46;margin:7px 0 0}
+.momento{background:#fff;border:1px solid var(--borde);border-radius:11px;margin-bottom:13px;overflow:hidden}
+.momento>h3{margin:0;padding:10px 15px;background:var(--vino);color:#fff;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:9px}
+.momento>h3 span.n{background:rgba(255,255,255,.22);width:21px;height:21px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px}
+.momento .in{padding:13px 15px}
+.comp{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-top:1px dashed var(--borde)}
+.comp:first-child{border-top:0}.comp .txt{flex:1;font-size:13px}
+.comp .quien{font-size:10.5px;color:var(--suave);text-transform:uppercase;letter-spacing:.3px}
+.comp .res{width:100%;margin-top:5px;font-size:12px;padding:4px 7px}
+.est{display:flex;gap:3px;flex-shrink:0}
+.est button{width:26px;height:26px;border:1px solid var(--borde);background:#fff;border-radius:6px;cursor:pointer;font-size:13px;line-height:1;padding:0;color:var(--suave)}
+.est button.on{color:#fff;border-color:transparent;font-weight:700}
+.est button[data-e="Hecho"].on{background:var(--ok)}.est button[data-e="Parcial"].on{background:var(--medio)}
+.est button[data-e="No hecho"].on{background:var(--mal)}
+.nuevo{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--borde)}
+.nuevo input.q{flex:1;min-width:250px}
+.numeros{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px}
+.numeros label{display:block;font-size:10px;color:var(--vino);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:3px}
+.numeros input{width:100%;font-size:12.5px}
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--rojo);padding:24px}
+#login .caja{background:#fff;border-radius:14px;padding:34px 30px;max-width:400px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+#login img{height:34px;margin-bottom:18px}
+#login h1{font-size:19px;margin:0 0 6px}
+#login p{color:var(--suave);font-size:13px;margin:0 0 22px}
+#login .btn{width:100%;padding:11px}
+#login .nota{font-size:11.5px;color:var(--suave);margin-top:16px}
+#cargando{padding:60px 24px;text-align:center;color:var(--suave)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;
+  padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:99}
+#toast.ver{opacity:.95}
+#toast.mal{background:var(--mal)}
+</style></head><body>
+
+<div id="login" style="display:none"><div class="caja">
+  <img src="logo-color.svg" alt="Guamatur">
+  <h1>Ventas+ · Seguimiento</h1>
+  <p>Lo que se pidió contra lo que se hizo, semana a semana.</p>
+  <button class="btn" id="btnLogin">Entrar con Google</button>
+  <div class="nota">Solo cuentas <strong>@guamatur.com</strong> habilitadas como responsables del plan.</div>
+</div></div>
+
+<div id="sinacceso" style="display:none"><div id="login" style="display:flex"><div class="caja">
+  <img src="logo-color.svg" alt="Guamatur">
+  <h1>Todavía no tenés acceso</h1>
+  <p id="sinaccesoMail"></p>
+  <p>Esta herramienta es para los responsables del Plan Ventas+. Pedile a Nacho o a Rosina que te habiliten.</p>
+  <button class="btn sec" id="btnSalir2">Salir</button>
+</div></div></div>
+
+<div id="app" style="display:none">
+<header>
+  <img src="logo-blanco.svg" alt="Guamatur">
+  <div><div class="tit">Ventas+ · Seguimiento semanal</div>
+  <div class="sub">Lo que se pidió contra lo que se hizo, semana a semana.</div></div>
+  <div class="ctrl">
+    <span>Ciclo</span><select id="ciclo"></select>
+    <span>Semana</span><select id="semana"></select>
+    <span class="yo" id="yo"></span>
+    <button class="salir" id="btnSalir">Salir</button>
+  </div>
+</header>
+<nav>
+  <button class="on" data-v="semana">Esta semana</button>
+  <button data-v="grilla">Grilla semanal</button>
+  <button data-v="mensual">Resumen del ciclo</button>
+  <button data-v="reunion">La 1a1</button>
+  <button data-v="vendedor">Por vendedor</button>
+</nav>
+<div class="wrap">
+
+<div class="vista on" id="v-semana">
+  <div id="avisoSemana"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="barra">
+    <input type="search" id="q" placeholder="Buscar vendedor, acción o bloqueo…" style="min-width:240px">
+    <select id="fQuien"><option value="mios">Ver: los míos</option><option value="todos">Ver: todo el plan</option></select>
+    <select id="fOrden"><option value="urgencia">Ordenar: lo que aprieta primero</option><option value="nombre">Ordenar: por nombre</option></select>
+    <label style="font-size:12.5px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="soloPend" style="width:auto"> Solo lo que falta cargar</label>
+    <span class="cnt" id="cnt"></span>
+  </div>
+  <div class="grilla" id="tarjetas"></div>
+</div>
+
+<div class="vista" id="v-grilla">
+  <div class="aviso">La misma grilla de la planilla. <strong>«Acción acordada» se copia sola</strong> desde la
+  «Acción para esta semana» de la semana anterior — no se escribe a mano. Amarillo = lo que se carga.
+  Las filas de vendedores que no son tuyos se ven, pero no se editan.</div>
+  <div class="barra"><span id="gTit" style="font-weight:600"></span>
+    <button class="btn sec" id="expCsv">Bajar CSV</button><span class="cnt" id="gCnt"></span></div>
+  <div class="scrollx" id="grillaTabla"></div>
+</div>
+
+<div class="vista" id="v-mensual">
+  <div id="mensual"></div>
+  <h2>Línea de base — promedio mensual previo al programa</h2>
+  <div class="aviso rojo"><strong>Sin esto no se puede responder si el programa mejoró los números o solo
+  generó actividad.</strong> Se completa una sola vez, al inicio. La carga Gerencia.</div>
+  <div class="scrollx" id="base"></div>
+</div>
+
+<div class="vista" id="v-reunion">
+  <div class="barra"><select id="rVend"></select><select id="rFecha"></select>
+    <button class="btn" id="nuevaReu">+ Nueva 1a1</button><span class="cnt" id="rInfo"></span></div>
+  <div id="reuBody"></div>
+</div>
+
+<div class="vista" id="v-vendedor">
+  <div class="barra"><select id="tVend"></select><span class="cnt" id="tInfo"></span></div>
+  <div id="trayect"></div>
+</div>
+
+</div></div>
+<div id="cargando">Cargando…</div>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG — lo único que se toca al instalar en otro lado.
+// La anon key es pública por diseño: quien manda son la RLS y el hook de dominio.
+// ══════════════════════════════════════════════════════════════════════════════
+const CONFIG = {
+  SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
+  OAUTH_DOMINIO: 'guamatur.com',
+  VERSION: 'v1',
+};
+const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+  db: { schema: 'ventasplus' },
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+          storage: window.localStorage, storageKey: 'guamatur-ventasplus-auth' },
+});
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const d2 = n => String(n).padStart(2, '0');
+const hd = new Date();
+const HOY = hd.getFullYear() + '-' + d2(hd.getMonth() + 1) + '-' + d2(hd.getDate());
+const MESc = ['ene','feb','mar','abr','may','jun','jul','ago','set','oct','nov','dic'];
+const fmtF = f => { if (!f) return '—'; const p = String(f).slice(0,10).split('-'); return +p[2] + '-' + MESc[+p[1]-1]; };
+const miles = n => Number(n || 0).toLocaleString('es-UY', { maximumFractionDigits: 0 });
+const PESO = { 'Sí': 1, 'Parcial': .5, 'No': 0 };
+
+let YO = null;          // fila de perfiles
+let D = {};             // datos cargados
+let CICLO = '', SEMANA = '', RSEL = null;
+
+function toast(msg, mal) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'ver' + (mal ? ' mal' : '');
+  clearTimeout(t._t); t._t = setTimeout(() => t.className = '', mal ? 4500 : 2000);
+}
+function fallo(e, donde) {
+  console.error(donde, e);
+  toast((e && e.message ? e.message : 'Error') + ' — ' + donde, true);
+}
+
+// ── Sesión ───────────────────────────────────────────────────────────────────
+$('#btnLogin').onclick = () => sb.auth.signInWithOAuth({
+  provider: 'google',
+  options: { redirectTo: location.href.split('#')[0], queryParams: { hd: CONFIG.OAUTH_DOMINIO } },
+});
+const salir = async () => { try { await sb.auth.signOut({ scope: 'local' }); } catch (e) {} location.reload(); };
+$('#btnSalir').onclick = salir; $('#btnSalir2').onclick = salir;
+
+async function arrancar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { $('#cargando').style.display = 'none'; $('#login').style.display = 'flex'; return; }
+
+  const { data: perfil, error } = await sb.from('perfiles')
+    .select('*').eq('email', (session.user.email || '').toLowerCase()).maybeSingle();
+  if (error) return fallo(error, 'leyendo tu perfil');
+  if (!perfil || !perfil.activo) {
+    $('#cargando').style.display = 'none';
+    $('#sinacceso').style.display = 'block';
+    $('#sinaccesoMail').textContent = 'Entraste como ' + session.user.email + '.';
+    return;
+  }
+  YO = perfil;
+  await cargar();
+  $('#cargando').style.display = 'none';
+  $('#app').style.display = 'block';
+  $('#yo').textContent = perfil.nombre + (perfil.rol === 'direccion' ? ' · dirección' : '');
+  medirTope();
+  pintar();
+}
+
+// ── Carga ────────────────────────────────────────────────────────────────────
+async function cargar() {
+  const [ci, ve, se, lb] = await Promise.all([
+    sb.from('ciclos').select('*').order('desde'),
+    sb.from('vendedores').select('*').eq('activo', true).order('orden'),
+    sb.from('semanas').select('*').order('ciclo_id').order('orden'),
+    sb.from('linea_base').select('*'),
+  ]);
+  for (const r of [ci, ve, se, lb]) if (r.error) return fallo(r.error, 'cargando los datos');
+  D.ciclos = ci.data; D.vendedores = ve.data; D.semanas = se.data; D.base = lb.data;
+  D.vById = {}; D.vendedores.forEach(v => D.vById[v.id] = v);
+
+  if (!CICLO) {
+    const enCurso = D.semanas.find(s => HOY >= s.desde && HOY <= s.hasta);
+    CICLO = enCurso ? enCurso.ciclo_id : (D.ciclos[0] || {}).id;
+    SEMANA = enCurso ? enCurso.codigo : (semanasDe(CICLO)[0] || {}).codigo;
+  }
+  await cargarCiclo();
+  llenarSelectores();
+}
+async function cargarCiclo() {
+  const [gr, rs] = await Promise.all([
+    sb.from('v_grilla').select('*').eq('ciclo_id', CICLO),
+    sb.from('v_resumen').select('*').eq('ciclo_id', CICLO),
+  ]);
+  if (gr.error) return fallo(gr.error, 'cargando la grilla');
+  if (rs.error) return fallo(rs.error, 'cargando el resumen');
+  D.grilla = gr.data; D.resumen = rs.data;
+}
+async function cargarReuniones() {
+  const [re, co] = await Promise.all([
+    sb.from('reuniones').select('*').order('fecha', { ascending: false }),
+    sb.from('compromisos').select('*').order('orden'),
+  ]);
+  if (re.error) return fallo(re.error, 'cargando las 1a1');
+  if (co.error) return fallo(co.error, 'cargando los compromisos');
+  D.reuniones = re.data;
+  D.compromisos = co.data;
+  D.compsPorReunion = {};
+  co.data.forEach(c => (D.compsPorReunion[c.reunion_id] = D.compsPorReunion[c.reunion_id] || []).push(c));
+}
+
+const semanasDe = cid => D.semanas.filter(s => s.ciclo_id === cid);
+const semActual = () => semanasDe(CICLO).find(s => s.codigo === SEMANA) || semanasDe(CICLO)[0];
+const celda = (vid, cod) => D.grilla.find(g => g.vendedor_id === vid && g.codigo === cod) || {};
+const puedoEditar = vid => YO.rol === 'direccion' ||
+  (D.vById[vid] || {}).encargado_email === YO.email;
+
+function llenarSelectores() {
+  const cs = $('#ciclo'); cs.innerHTML = '';
+  D.ciclos.forEach(c => cs.add(new Option(c.nombre, c.id)));
+  cs.value = CICLO;
+  llenarSemanas();
+  ['#rVend', '#tVend'].forEach(sel => {
+    const el = $(sel); el.innerHTML = '';
+    D.vendedores.forEach(v => el.add(new Option(v.nombre + '  (' + v.encargado + ')', v.id)));
+  });
+}
+function llenarSemanas() {
+  const ss = $('#semana'); ss.innerHTML = '';
+  semanasDe(CICLO).forEach(s => ss.add(new Option(
+    s.codigo + '  ' + fmtF(s.desde) + ' al ' + fmtF(s.hasta), s.codigo)));
+  if (!semanasDe(CICLO).some(s => s.codigo === SEMANA)) SEMANA = (semanasDe(CICLO)[0] || {}).codigo;
+  ss.value = SEMANA;
+}
+$('#ciclo').onchange = async e => { CICLO = e.target.value; llenarSemanas(); await cargarCiclo(); pintar(); };
+$('#semana').onchange = e => { SEMANA = e.target.value; pintar(); };
+
+// ── Guardar ──────────────────────────────────────────────────────────────────
+async function guardarCelda(vid, campos) {
+  const fila = Object.assign({ ciclo_id: CICLO, codigo_semana: SEMANA, vendedor_id: vid }, campos);
+  const { error } = await sb.from('seguimiento').upsert(fila, { onConflict: 'ciclo_id,codigo_semana,vendedor_id' });
+  if (error) return fallo(error, 'guardando la semana');
+  await cargarCiclo();
+  toast('Guardado');
+  pintar();
+}
+async function guardarFoco(vid, foco) {
+  const { error } = await sb.from('focos').upsert(
+    { ciclo_id: CICLO, vendedor_id: vid, foco }, { onConflict: 'ciclo_id,vendedor_id' });
+  if (error) return fallo(error, 'guardando el foco');
+  await cargarCiclo(); toast('Guardado'); pintar();
+}
+
+// ── Navegación ───────────────────────────────────────────────────────────────
+$$('nav button').forEach(b => b.onclick = async () => {
+  $$('nav button').forEach(x => x.classList.toggle('on', x === b));
+  $$('.vista').forEach(x => x.classList.toggle('on', x.id === 'v-' + b.dataset.v));
+  if ((b.dataset.v === 'reunion' || b.dataset.v === 'vendedor') && !D.reuniones) await cargarReuniones();
+  pintar();
+});
+const vistaActual = () => (($$('nav button').find(b => b.classList.contains('on')) || {}).dataset || {}).v;
+function irA(v) { const b = $$('nav button').find(x => x.dataset.v === v); if (b) b.click(); }
+function medirTope() { const h = $('header');
+  document.documentElement.style.setProperty('--hHeader', (h ? h.offsetHeight : 52) + 'px'); }
+addEventListener('resize', medirTope);
+
+// ══ 1 · ESTA SEMANA ═════════════════════════════════════════════════════════
+function alertas(g) {
+  const a = [], cerrada = semActual().hasta < HOY;
+  if (g.accion_acordada && !g.cumplida) a.push({ t: 'falta evaluar lo acordado', g: 3 });
+  if (g.cumplida === 'No') a.push({ t: 'no se hizo', g: 3 });
+  if (g.cumplida && !g.evidencia) a.push({ t: 'marcada sin evidencia', g: 2 });
+  if (!g.accion_proxima) a.push({ t: 'falta la acción para la próxima', g: 2 });
+  if (g.chatwoot_ok === 'No') a.push({ t: 'no usó Chatwoot', g: 2 });
+  if (cerrada && g.accion_acordada && g.fichas == null && g.facturacion == null)
+    a.push({ t: 'semana cerrada sin números', g: 1 });
+  return a;
+}
+function pintarSemana() {
+  const s = semActual();
+  const soloMios = $('#fQuien').value === 'mios';
+  let filas = D.grilla.filter(g => g.codigo === SEMANA)
+    .filter(g => !soloMios || puedoEditar(g.vendedor_id))
+    .map(g => Object.assign({}, g, { al: alertas(g) }));
+
+  const ev = filas.filter(x => x.cumplida);
+  const pct = ev.length ? Math.round(ev.reduce((a, x) => a + PESO[x.cumplida], 0) / ev.length * 100) : null;
+  const conBloqueo = filas.filter(x => (x.bloqueo || '').trim());
+  const sinChat = filas.filter(x => x.chatwoot_ok === 'No').length;
+  const fichas = filas.reduce((a, x) => a + Number(x.fichas || 0), 0);
+  const fact = filas.reduce((a, x) => a + Number(x.facturacion || 0), 0);
+
+  $('#avisoSemana').innerHTML = conBloqueo.length === 0
+    ? '<div class="aviso rojo"><strong>Nadie pidió apoyo esta semana.</strong> Si la columna de bloqueos ' +
+      'queda siempre vacía, el programa se está viviendo como auditoría y no como acompañamiento.</div>'
+    : '<div class="aviso ok"><strong>' + conBloqueo.length + ' pedido' + (conBloqueo.length > 1 ? 's' : '') +
+      ' de apoyo:</strong> ' + conBloqueo.map(x => esc(x.corto) + ' — ' + esc(x.bloqueo)).join(' · ') + '</div>';
+
+  $('#kpis').innerHTML = [
+    ['Semana', fmtF(s.desde) + ' al ' + fmtF(s.hasta), ''],
+    ['Cumplimiento', pct === null ? '—' : pct + '%', pct !== null && pct < 50 ? 'alerta' : pct !== null && pct >= 80 ? 'bien' : ''],
+    ['Acciones evaluadas', ev.length + '/' + filas.filter(x => x.accion_acordada).length, ''],
+    ['Fichas', fichas || '—', ''],
+    ['Facturación real', fact ? 'US$ ' + miles(fact) : '—', ''],
+    ['Sin usar Chatwoot', sinChat, sinChat ? 'alerta' : ''],
+  ].map(k => '<div class="kpi ' + k[2] + '"><div class="v">' + k[1] + '</div><div class="l">' + k[0] + '</div></div>').join('');
+
+  const q = ($('#q').value || '').toLowerCase();
+  let lista = filas.filter(x => !q || (x.nombre + ' ' + (x.accion_acordada||'') + ' ' +
+    (x.accion_proxima||'') + ' ' + (x.bloqueo||'') + ' ' + (x.foco||'')).toLowerCase().includes(q));
+  if ($('#soloPend').checked) lista = lista.filter(x => x.al.length);
+  const peso = x => x.al.reduce((n, a) => n + a.g, 0);
+  lista.sort($('#fOrden').value === 'nombre' ? (a, b) => a.corto.localeCompare(b.corto)
+                                             : (a, b) => (peso(b) - peso(a)) || a.corto.localeCompare(b.corto));
+  $('#cnt').textContent = lista.length + ' de ' + filas.length + ' vendedores';
+
+  $('#tarjetas').innerHTML = lista.map(g => {
+    const mio = puedoEditar(g.vendedor_id), dis = mio ? '' : ' disabled';
+    const p = peso(g), color = p >= 3 ? 'rojo' : p > 0 ? 'ambar' : 'verde';
+    const seg = (campo, ops) => '<div class="seg">' + ops.map(o =>
+      '<button data-f="' + campo + '" data-v="' + o + '" class="' + (g[campo] === o ? 'on' : '') + '"' + dis + '>' + o + '</button>').join('') + '</div>';
+    return '<div class="tarj ' + color + (mio ? '' : ' ajeno') + '" data-vend="' + g.vendedor_id + '">' +
+      '<div class="cab"><div class="nom">' + esc(g.nombre) + '</div><div class="meta">' + esc(g.encargado) +
+        (mio ? '' : ' · <em>solo lectura</em>') +
+        (g.al.length ? ' · <span style="color:var(--mal)">' + g.al.map(a => esc(a.t)).join(' · ') + '</span>' : ' · al día') +
+        (g.actualizado_por ? ' · últ. ' + esc(g.actualizado_por.split('@')[0]) : '') + '</div></div>' +
+      '<div class="cuerpo">' +
+        '<div class="blq"><label>Foco del mes</label><input data-f="foco" value="' + esc(g.foco || '') + '" placeholder="definir el foco del mes"' + dis + '></div>' +
+        '<div class="blq"><label>Acción acordada — viene de la semana anterior</label>' +
+          '<div class="pedido' + (g.accion_acordada ? '' : ' vacia') + '">' +
+          (g.accion_acordada ? esc(g.accion_acordada) : 'no se le pidió nada la semana pasada') + '</div></div>' +
+        '<div class="blq"><label>¿Cumplida?</label>' + seg('cumplida', ['Sí','Parcial','No']) + '</div>' +
+        '<div class="blq"><label>Evidencia / comentario</label><textarea data-f="evidencia" placeholder="qué pasó concretamente — números, respuestas, capturas"' + dis + '>' + esc(g.evidencia || '') + '</textarea></div>' +
+        '<div class="numeros">' +
+          '<div><label>Fichas</label><input data-f="fichas" value="' + esc(g.fichas == null ? '' : g.fichas) + '"' + dis + '></div>' +
+          '<div><label>Facturación real</label><input data-f="facturacion" value="' + esc(g.facturacion == null ? '' : g.facturacion) + '"' + dis + '></div>' +
+          '<div><label>Rentabilidad real</label><input data-f="rentabilidad" value="' + esc(g.rentabilidad == null ? '' : g.rentabilidad) + '"' + dis + '></div></div>' +
+        '<div class="blq"><label>Chatwoot OK</label>' + seg('chatwoot_ok', ['Sí','No']) + '</div>' +
+        '<div class="blq"><label>Bloqueo / apoyo requerido</label><input data-f="bloqueo" value="' + esc(g.bloqueo || '') + '" placeholder="qué necesita de nosotros"' + dis + '></div>' +
+        '<div class="blq"><label>Acción para esta semana</label><textarea data-f="accion_proxima" placeholder="qué se le pide — concreto y medible"' + dis + '>' + esc(g.accion_proxima || '') + '</textarea></div>' +
+      '</div>' +
+      '<div class="pie"><button class="btn chico sec" data-ir="' + g.vendedor_id + '" style="margin-left:auto">Ver la 1a1 →</button></div></div>';
+  }).join('') || '<div class="vacio">Nada para mostrar con este filtro.</div>';
+
+  $$('.tarj').forEach(t => {
+    const vid = t.dataset.vend;
+    if (!puedoEditar(vid)) return;
+    t.querySelectorAll('[data-f]').forEach(el => {
+      const f = el.dataset.f;
+      if (el.tagName === 'BUTTON') el.onclick = () =>
+        guardarCelda(vid, { [f]: el.classList.contains('on') ? null : el.dataset.v });
+      else el.onchange = () => {
+        if (f === 'foco') return guardarFoco(vid, el.value);
+        const num = ['fichas','facturacion','rentabilidad'].includes(f);
+        guardarCelda(vid, { [f]: num ? (el.value.trim() === '' ? null : Number(el.value.replace(',', '.'))) : el.value });
+      };
+    });
+  });
+  $$('[data-ir]').forEach(b => b.onclick = async () => {
+    $('#rVend').value = b.dataset.ir; RSEL = null;
+    if (!D.reuniones) await cargarReuniones();
+    irA('reunion');
+  });
+}
+$('#q').oninput = pintarSemana; $('#fOrden').onchange = pintarSemana;
+$('#soloPend').onchange = pintarSemana; $('#fQuien').onchange = () => pintar();
+
+// ══ 2 · GRILLA SEMANAL ══════════════════════════════════════════════════════
+const COLS = ['Vendedor','Encargado','Foco del mes','Acción acordada (semana anterior)','Cumplida',
+  'Evidencia / comentario','Fichas','Facturación real (USD)','Rentabilidad real (USD)','Chatwoot OK',
+  'Bloqueo / apoyo requerido','Acción para esta semana'];
+function filasSemana() {
+  const soloMios = $('#fQuien').value === 'mios';
+  return D.grilla.filter(g => g.codigo === SEMANA)
+    .filter(g => !soloMios || puedoEditar(g.vendedor_id))
+    .sort((a, b) => a.vend_orden - b.vend_orden);
+}
+function pintarGrilla() {
+  const s = semActual(), filas = filasSemana();
+  $('#gTit').textContent = 'Semana del ' + fmtF(s.desde) + ' al ' + fmtF(s.hasta);
+  const cuerpo = filas.map(g => {
+    const mio = puedoEditar(g.vendedor_id), dis = mio ? '' : ' disabled';
+    const cls = mio ? 'editable' : '';
+    const inp = (f, ancho, extra) => '<td class="' + cls + ' ' + (extra || '') + '"' +
+      (ancho ? ' style="min-width:' + ancho + 'px"' : '') + '><input data-g="' + g.vendedor_id + '|' + f +
+      '" value="' + esc(g[f] == null ? '' : g[f]) + '"' + dis + '></td>';
+    const sel = (f, ops) => '<td class="' + cls + '"><select data-g="' + g.vendedor_id + '|' + f + '"' + dis + '>' +
+      ops.map(o => '<option' + ((g[f] || '') === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></td>';
+    return '<tr><td><strong>' + esc(g.corto) + '</strong></td><td>' + esc(g.encargado) + '</td>' +
+      '<td class="' + cls + '" style="min-width:150px"><input data-g="' + g.vendedor_id + '|foco" value="' + esc(g.foco || '') + '"' + dis + '></td>' +
+      '<td style="max-width:230px;color:' + (g.accion_acordada ? 'inherit' : 'var(--suave)') + '">' +
+        (g.accion_acordada ? esc(g.accion_acordada) : '—') + '</td>' +
+      sel('cumplida', ['','Sí','Parcial','No']) + inp('evidencia', 200) +
+      inp('fichas', 0, 'num') + inp('facturacion', 0, 'num') + inp('rentabilidad', 0, 'num') +
+      sel('chatwoot_ok', ['','Sí','No']) + inp('bloqueo', 170) + inp('accion_proxima', 210) + '</tr>';
+  }).join('');
+  const ev = filas.filter(g => g.cumplida);
+  const pct = ev.length ? Math.round(ev.reduce((a, g) => a + PESO[g.cumplida], 0) / ev.length * 100) : null;
+  const suma = f => filas.reduce((a, g) => a + Number(g[f] || 0), 0);
+  $('#grillaTabla').innerHTML = '<table><thead><tr>' + COLS.map(h => '<th>' + h + '</th>').join('') +
+    '</tr></thead><tbody>' + cuerpo +
+    '<tr class="total"><td>TOTAL</td><td></td><td></td><td>Cumplimiento →</td><td>' + (pct === null ? '—' : pct + '%') +
+    '</td><td></td><td class="num">' + (suma('fichas') || '—') + '</td>' +
+    '<td class="num">' + (suma('facturacion') ? miles(suma('facturacion')) : '—') + '</td>' +
+    '<td class="num">' + (suma('rentabilidad') ? miles(suma('rentabilidad')) : '—') + '</td>' +
+    '<td></td><td></td><td></td></tr></tbody></table>';
+  $('#gCnt').textContent = filas.length + ' vendedores';
+  $$('[data-g]').forEach(el => el.onchange = () => {
+    const p = el.dataset.g.split('|'), f = p[1];
+    if (f === 'foco') return guardarFoco(p[0], el.value);
+    const num = ['fichas','facturacion','rentabilidad'].includes(f);
+    guardarCelda(p[0], { [f]: el.value === '' ? null : (num ? Number(String(el.value).replace(',', '.')) : el.value) });
+  });
+}
+$('#expCsv').onclick = () => {
+  const filas = filasSemana().map(g => [g.corto, g.encargado, g.foco || '', g.accion_acordada || '',
+    g.cumplida || '', g.evidencia || '', g.fichas ?? '', g.facturacion ?? '', g.rentabilidad ?? '',
+    g.chatwoot_ok || '', g.bloqueo || '', g.accion_proxima || '']);
+  const csv = [COLS].concat(filas).map(r => r.map(x =>
+    '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'ventas-plus-' + CICLO + '-' + SEMANA + '.csv'; a.click();
+};
+
+// ══ 3 · RESUMEN DEL CICLO + LÍNEA DE BASE ═══════════════════════════════════
+function pintarMensual() {
+  const c = D.ciclos.find(x => x.id === CICLO) || {};
+  const soloMios = $('#fQuien').value === 'mios';
+  const sems = semanasDe(CICLO);
+  const filas = D.resumen.filter(r => !soloMios || puedoEditar(r.vendedor_id))
+    .sort((a, b) => a.vend_orden - b.vend_orden);
+  const porSem = (vid, cod) => Number((celda(vid, cod) || {}).fichas || 0);
+  const T = k => filas.reduce((a, f) => a + Number(f[k] || 0), 0);
+
+  $('#mensual').innerHTML = '<h2>Resumen del ciclo — ' + esc(c.nombre || '') + '</h2>' +
+    '<div class="aviso">Se calcula solo desde las semanas. <strong>Cumplimiento:</strong> Sí = 1, Parcial = 0,5, ' +
+    'No = 0; el denominador son solo las semanas con acción evaluada.</div>' +
+    '<div class="scrollx"><table><thead><tr><th>Vendedor</th><th>Encargado</th>' +
+    sems.map(s => '<th class="num">' + s.codigo + '</th>').join('') +
+    '<th class="num">Fichas mes</th><th class="num">Facturación</th><th class="num">Rentabilidad</th>' +
+    '<th>% cumplimiento</th><th class="num">Sem. sin Chatwoot</th><th class="num">Pidió apoyo</th>' +
+    '<th class="num">Fichas base</th><th class="num">Desvío vs base</th></tr></thead><tbody>' +
+    filas.map(f => '<tr><td><strong>' + esc(f.corto) + '</strong></td><td>' + esc(f.encargado) + '</td>' +
+      sems.map(s => '<td class="num">' + porSem(f.vendedor_id, s.codigo) + '</td>').join('') +
+      '<td class="num"><strong>' + Number(f.fichas_mes || 0) + '</strong></td>' +
+      '<td class="num">' + (Number(f.facturacion_mes) ? miles(f.facturacion_mes) : '—') + '</td>' +
+      '<td class="num">' + (Number(f.rentabilidad_mes) ? miles(f.rentabilidad_mes) : '—') + '</td>' +
+      '<td>' + (f.pct_cumplimiento == null ? '<span class="chip">sin evaluar</span>' :
+        '<div class="linea"><i style="width:' + f.pct_cumplimiento + '%;background:' +
+        (f.pct_cumplimiento >= 80 ? 'var(--ok)' : f.pct_cumplimiento >= 40 ? 'var(--medio)' : 'var(--mal)') +
+        '"></i></div><span style="font-size:11px;color:var(--suave)">' + f.pct_cumplimiento + '%</span>') + '</td>' +
+      '<td class="num"' + (f.semanas_sin_chatwoot ? ' style="color:var(--mal);font-weight:700"' : '') + '>' + f.semanas_sin_chatwoot + '</td>' +
+      '<td class="num">' + f.semanas_con_pedido + '</td>' +
+      '<td class="num">' + (f.fichas_base == null ? '—' : Number(f.fichas_base)) + '</td>' +
+      '<td class="num"' + (f.desvio_vs_base < 0 ? ' style="color:var(--mal);font-weight:700"' :
+        f.desvio_vs_base > 0 ? ' style="color:var(--ok);font-weight:700"' : '') + '>' +
+        (f.desvio_vs_base == null ? '—' : (f.desvio_vs_base > 0 ? '+' : '') + Number(f.desvio_vs_base)) + '</td></tr>').join('') +
+    '<tr class="total"><td>TOTAL</td><td></td>' +
+      sems.map(s => '<td class="num">' + filas.reduce((a, f) => a + porSem(f.vendedor_id, s.codigo), 0) + '</td>').join('') +
+      '<td class="num">' + T('fichas_mes') + '</td><td class="num">' + (T('facturacion_mes') ? miles(T('facturacion_mes')) : '—') + '</td>' +
+      '<td class="num">' + (T('rentabilidad_mes') ? miles(T('rentabilidad_mes')) : '—') + '</td><td></td>' +
+      '<td class="num">' + T('semanas_sin_chatwoot') + '</td><td class="num">' + T('semanas_con_pedido') + '</td>' +
+      '<td></td><td></td></tr></tbody></table></div>' +
+    (filas.every(f => f.fichas_base == null) ? '<div class="aviso rojo" style="margin-top:12px">La línea de base ' +
+      'está vacía, así que <strong>«Desvío vs base» no se puede calcular</strong>: hoy se sabe cuánta actividad ' +
+      'hubo, pero no si mejoró los números.</div>' : '');
+
+  const dir = YO.rol === 'direccion', dis = dir ? '' : ' disabled';
+  $('#base').innerHTML = '<table><thead><tr><th>Vendedor</th><th>Encargado</th><th class="num">Fichas / mes</th>' +
+    '<th class="num">Facturación / mes (USD)</th><th class="num">Rentabilidad / mes (USD)</th></tr></thead><tbody>' +
+    D.vendedores.map(v => {
+      const b = D.base.find(x => x.vendedor_id === v.id) || {};
+      return '<tr><td><strong>' + esc(v.corto) + '</strong></td><td>' + esc(v.encargado) + '</td>' +
+        ['fichas_mes','facturacion_mes','rentabilidad_mes'].map(f =>
+          '<td class="' + (dir ? 'editable' : '') + ' num"><input data-b="' + v.id + '|' + f + '" value="' +
+          esc(b[f] == null ? '' : b[f]) + '"' + dis + '></td>').join('') + '</tr>';
+    }).join('') + '</tbody></table>' +
+    (dir ? '' : '<div class="vacio">La línea de base la carga Gerencia.</div>');
+  if (dir) $$('[data-b]').forEach(el => el.onchange = async () => {
+    const p = el.dataset.b.split('|');
+    const fila = { vendedor_id: p[0], [p[1]]: el.value === '' ? null : Number(String(el.value).replace(',', '.')) };
+    const { error } = await sb.from('linea_base').upsert(fila, { onConflict: 'vendedor_id' });
+    if (error) return fallo(error, 'guardando la línea de base');
+    const lb = await sb.from('linea_base').select('*'); D.base = lb.data;
+    await cargarCiclo(); toast('Guardado'); pintarMensual();
+  });
+}
+
+// ══ 4 · LA 1a1 ══════════════════════════════════════════════════════════════
+$('#rVend').onchange = () => { RSEL = null; pintarReunion(); };
+$('#nuevaReu').onclick = async () => {
+  const vid = $('#rVend').value;
+  if (!puedoEditar(vid)) return toast('Ese vendedor no es tuyo', true);
+  const id = 'N' + Date.now().toString(36) + '-' + vid;
+  const { error } = await sb.from('reuniones').insert({
+    id, vendedor_id: vid, fecha: HOY, encargado: YO.nombre, fuente: 'app' });
+  if (error) return fallo(error, 'creando la 1a1');
+  await cargarReuniones(); RSEL = id; toast('1a1 creada'); pintarReunion();
+};
+const reusDe = vid => (D.reuniones || []).filter(r => r.vendedor_id === vid);
+const compsDe = rid => (D.compsPorReunion || {})[rid] || [];
+const puntaje = rid => { const c = compsDe(rid); if (!c.length) return null;
+  return c.reduce((a, x) => a + (x.estado === 'Hecho' ? 1 : x.estado === 'Parcial' ? .5 : 0), 0) / c.length; };
+const ESTADOS = ['Hecho','Parcial','No hecho'];
+function fichaComp(c, editable) {
+  const dis = editable ? '' : ' disabled';
+  return '<div class="comp" data-c="' + c.id + '">' +
+    '<div class="est">' + ESTADOS.map(e => '<button data-e="' + e + '" class="' + (c.estado === e ? 'on' : '') +
+      '" title="' + e + '"' + dis + '>' + (e === 'Hecho' ? '✓' : e === 'Parcial' ? '~' : '✗') + '</button>').join('') + '</div>' +
+    '<div class="txt"><span class="quien">' + esc(c.quien || '') + '</span> ' + esc(c.texto) +
+      (c.origen === 'memo' ? ' <span class="chip">del memo</span>' : '') +
+      '<input class="res" placeholder="¿qué resultado dio?" value="' + esc(c.resultado || '') + '"' + dis + '>' +
+      '<div style="font-size:11px;color:var(--suave);margin-top:4px">para cuándo: ' +
+      '<input type="date" value="' + esc(c.vence || '') + '" style="font-size:11px;padding:2px 5px"' + dis + '></div>' +
+    '</div></div>';
+}
+function engancharComps(editable) {
+  if (!editable) return;
+  $$('.comp').forEach(el => {
+    const id = el.dataset.c;
+    const set = async p => {
+      const { error } = await sb.from('compromisos').update(p).eq('id', id);
+      if (error) return fallo(error, 'guardando el compromiso');
+      await cargarReuniones(); toast('Guardado'); pintarReunion();
+    };
+    el.querySelectorAll('.est button').forEach(b => b.onclick = () =>
+      set({ estado: b.classList.contains('on') ? null : b.dataset.e }));
+    const r = el.querySelector('.res'); if (r) r.onchange = () => set({ resultado: r.value });
+    const f = el.querySelector('input[type="date"]'); if (f) f.onchange = () => set({ vence: f.value || null });
+  });
+}
+function pintarReunion() {
+  const vid = $('#rVend').value || (D.vendedores[0] || {}).id;
+  const R = reusDe(vid), sel = $('#rFecha'), editable = puedoEditar(vid);
+  $('#nuevaReu').disabled = !editable;
+  sel.innerHTML = R.map(r => '<option value="' + r.id + '">' + fmtF(r.fecha) + ' · ' +
+    compsDe(r.id).length + ' compromisos</option>').join('') || '<option value="">sin 1a1</option>';
+  if (!RSEL || !R.some(r => r.id === RSEL)) RSEL = R.length ? R[0].id : null;
+  sel.value = RSEL || ''; sel.onchange = () => { RSEL = sel.value; pintarReunion(); };
+  const r = R.find(x => x.id === RSEL);
+  if (!r) { $('#reuBody').innerHTML = '<div class="vacio">Este vendedor no tiene 1a1 registradas.' +
+    (editable ? ' Arrancá con «+ Nueva 1a1».' : '') + '</div>'; $('#rInfo').textContent = ''; return; }
+  const idx = R.indexOf(r), ant = R[idx + 1] || null, pAnt = ant ? puntaje(ant.id) : null;
+  const compsAnt = ant ? compsDe(ant.id) : [];
+  $('#rInfo').textContent = '1a1 ' + (R.length - idx) + ' de ' + R.length + ' · ' + (r.encargado || '') +
+    (editable ? '' : ' · solo lectura');
+  $('#reuBody').innerHTML =
+    '<div class="momento"><h3><span class="n">1</span> Qué habíamos acordado ' + (ant ? 'el ' + fmtF(ant.fecha) : '') +
+      (pAnt !== null && compsAnt.some(c => c.estado) ? '<span class="pill ' +
+        (pAnt >= .8 ? 'pSi' : pAnt >= .4 ? 'pParcial' : 'pNo') + '" style="margin-left:auto">cumplió ' +
+        Math.round(pAnt * 100) + '%</span>' : '') + '</h3><div class="in">' +
+      (compsAnt.length ? compsAnt.map(c => fichaComp(c, editable)).join('')
+        : '<div class="vacio">' + (ant ? 'La 1a1 anterior no dejó compromisos escritos.' : 'Es la primera 1a1 registrada.') + '</div>') +
+      (ant && ant.repaso ? '<div class="aviso" style="margin:11px 0 0">Del memo: ' + esc(ant.repaso) + '</div>' : '') + '</div></div>' +
+    '<div class="momento"><h3><span class="n">2</span> Qué se habló</h3><div class="in">' +
+      '<textarea id="notas" placeholder="El contexto, lo que hay que tener en cuenta, el coaching…"' +
+      (editable ? '' : ' disabled') + '>' + esc(r.notas || '') + '</textarea>' +
+      '<div class="aviso" style="margin:11px 0 0">Los números de la semana se cargan en <strong>Esta semana</strong> — no se duplican acá.</div></div></div>' +
+    '<div class="momento"><h3><span class="n">3</span> Qué se compromete para la próxima</h3><div class="in">' +
+      (compsDe(r.id).length ? compsDe(r.id).map(c => fichaComp(c, editable)).join('') : '<div class="vacio">Todavía no hay compromisos.</div>') +
+      (editable ? '<div class="nuevo"><input class="q" id="ncTxt" placeholder="Qué se compromete a hacer — concreto y medible">' +
+        '<input id="ncQuien" placeholder="quién" style="width:105px" value="' + esc((D.vById[vid] || {}).corto || '') + '">' +
+        '<input type="date" id="ncVence"><button class="btn" id="ncAdd">Agregar</button></div>' +
+        '<div class="nuevo"><button class="btn sec" id="aSemana">Pasar estos compromisos a «Acción para esta semana» →</button>' +
+        '<span class="cnt">' + (r.fuente === 'app' ? '1a1 creada acá' : 'viene del memo del ' + fmtF(r.fecha)) + '</span></div>' : '') +
+    '</div></div>';
+  if (editable) {
+    $('#notas').onchange = async e => {
+      const { error } = await sb.from('reuniones').update({ notas: e.target.value }).eq('id', r.id);
+      if (error) return fallo(error, 'guardando las notas');
+      await cargarReuniones(); toast('Guardado');
+    };
+    $('#ncAdd').onclick = async () => {
+      const texto = $('#ncTxt').value.trim(); if (!texto) return;
+      const { error } = await sb.from('compromisos').insert({
+        id: r.id + '-x' + Date.now().toString(36), reunion_id: r.id, quien: $('#ncQuien').value.trim(),
+        texto, vence: $('#ncVence').value || null, origen: 'app', orden: compsDe(r.id).length });
+      if (error) return fallo(error, 'agregando el compromiso');
+      await cargarReuniones(); toast('Compromiso agregado'); pintarReunion();
+    };
+    $('#aSemana').onclick = () => guardarCelda(vid, { accion_proxima: compsDe(r.id).map(c => c.texto).join(' · ') });
+  }
+  engancharComps(editable);
+}
+
+// ══ 5 · POR VENDEDOR ════════════════════════════════════════════════════════
+$('#tVend').onchange = pintarVendedor;
+function pintarVendedor() {
+  const vid = $('#tVend').value || (D.vendedores[0] || {}).id;
+  const R = reusDe(vid);
+  const sem = D.grilla.filter(g => g.vendedor_id === vid &&
+      (g.accion_acordada || g.cumplida || g.evidencia || g.accion_proxima || g.fichas != null))
+    .sort((a, b) => b.desde.localeCompare(a.desde));
+  $('#tInfo').textContent = R.length + ' 1a1 · ' + sem.length + ' semanas con movimiento (ciclo actual)';
+  $('#trayect').innerHTML = '<h2>Semana a semana</h2>' +
+    (sem.length ? '<div class="tl">' + sem.map(x =>
+      '<div class="ev"><div class="f">' + esc(x.codigo) + ' · ' + fmtF(x.desde) + ' al ' + fmtF(x.hasta) +
+        (x.cumplida ? ' <span class="pill ' + (x.cumplida === 'Sí' ? 'pSi' : x.cumplida === 'Parcial' ? 'pParcial' : 'pNo') +
+          '">' + esc(x.cumplida) + '</span>' : '') + '</div>' +
+        (x.accion_acordada ? '<div class="t">' + esc(x.accion_acordada) + '</div>'
+                           : '<div class="t" style="color:var(--suave)">sin acción pedida</div>') +
+        (x.evidencia ? '<p style="font-size:12.5px;color:#3f3f46;margin:4px 0 6px">' + esc(x.evidencia) + '</p>' : '') +
+        (x.fichas != null ? '<span class="chip">fichas: ' + x.fichas + '</span>' : '') +
+        (x.facturacion != null ? '<span class="chip">facturación: ' + miles(x.facturacion) + '</span>' : '') +
+        (x.bloqueo ? '<span class="chip">pidió: ' + esc(x.bloqueo) + '</span>' : '') + '</div>').join('') + '</div>'
+      : '<div class="vacio">Sin movimiento cargado en este ciclo.</div>') +
+    '<h2>Las 1a1</h2>' +
+    (R.length ? '<div class="tl">' + R.map(r => {
+      const cs = compsDe(r.id), p = puntaje(r.id), h = cs.filter(c => c.estado === 'Hecho').length;
+      return '<div class="ev"><div class="f">' + fmtF(r.fecha) + ' · ' + esc(r.encargado || '') +
+        (p !== null && cs.some(c => c.estado) ? ' <span class="pill ' + (p >= .8 ? 'pSi' : p >= .4 ? 'pParcial' : 'pNo') +
+          '">' + h + '/' + cs.length + ' cumplidos</span>' : '') + '</div>' +
+        '<div class="t">' + esc(r.titular || '1a1') + '</div>' +
+        (cs.length ? '<details style="margin-top:6px"><summary>' + cs.length + ' compromisos</summary>' +
+          cs.map(c => '<p>' + (c.estado ? '<span class="pill ' + (c.estado === 'Hecho' ? 'pSi' :
+            c.estado === 'Parcial' ? 'pParcial' : 'pNo') + '">' + c.estado + '</span> ' :
+            '<span class="pill pAbierto">abierto</span> ') + esc(c.texto) +
+            (c.resultado ? ' — <em>' + esc(c.resultado) + '</em>' : '') + '</p>').join('') + '</details>' : '') +
+        (r.notas ? '<details><summary>Notas</summary><p>' + esc(r.notas).replace(/\n/g, '<br>') + '</p></details>' : '') + '</div>';
+    }).join('') + '</div>' : '<div class="vacio">Sin 1a1 registradas.</div>');
+}
+
+// ── Pintar ───────────────────────────────────────────────────────────────────
+function pintar() {
+  medirTope();
+  const v = vistaActual();
+  if (v === 'semana') pintarSemana();
+  else if (v === 'grilla') pintarGrilla();
+  else if (v === 'mensual') pintarMensual();
+  else if (v === 'reunion') pintarReunion();
+  else if (v === 'vendedor') pintarVendedor();
+}
+
+sb.auth.onAuthStateChange((evt) => { if (evt === 'SIGNED_IN' && !YO) arrancar(); });
+arrancar();
+</script></body></html>
