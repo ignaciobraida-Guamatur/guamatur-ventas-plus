@@ -315,7 +315,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
   OAUTH_DOMINIO: 'guamatur.com',
-  VERSION: 'v8',
+  VERSION: 'v9',
 };
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   db: { schema: 'ventasplus' },
@@ -931,6 +931,13 @@ function pintarReunion() {
   $('#rInfo').textContent = '1a1 ' + (R.length - idx) + ' de ' + R.length + ' · ' + (r.encargado || '') +
     (editable ? '' : ' · solo lectura');
   $('#reuBody').innerHTML =
+    // La fecha decide a qué semana se imputa todo lo que se carga acá, así que va arriba de todo
+    // y se puede corregir: una reunión del jueves cargada el lunes iría a la semana equivocada.
+    '<div class="barra"><label for="reuFecha" style="font-size:12.5px">Fecha de la reunión</label>' +
+      '<input type="date" id="reuFecha" value="' + esc(String(r.fecha).slice(0, 10)) + '"' +
+      (editable ? '' : ' disabled') + '>' +
+      '<span class="cnt">' + (editable ? 'Si la reunión fue otro día, cambiala: define a qué semana va.'
+                                       : 'Solo lectura') + '</span></div>' +
     (s ? '<div class="aviso' + (pa.hechos === 3 ? ' ok' : '') + '">Esta 1a1 cae en <strong>' +
       esc((D.ciclos.find(c => c.id === s.ciclo_id) || {}).nombre || '') + ' · ' + esc(s.codigo) + '</strong> (' +
       fmtF(s.desde) + ' al ' + fmtF(s.hasta) + '). Lo que cargues acá <strong>es</strong> la semana: no hay que ' +
@@ -972,6 +979,21 @@ function pintarReunion() {
 
   if (s) ['#semPedido', '#semNumeros', '#semProxima'].forEach(x => engancharCampos($(x), vid, s.codigo));
   if (editable) {
+    $('#reuFecha').onchange = async e => {
+      const nueva = e.target.value;
+      if (!nueva || nueva === String(r.fecha).slice(0, 10)) return;
+      // Lo ya cargado NO se muda: vive en la fila de su semana, no en la reunión. Avisarlo.
+      const habia = s && (g.cumplida != null || g.fichas != null || g.facturacion != null ||
+        g.chatwoot_ok != null || (g.evidencia || '').trim() || (g.accion_proxima || '').trim());
+      const { error } = await sb.from('reuniones').update({ fecha: nueva }).eq('id', r.id);
+      if (error) return fallo(error, 'cambiando la fecha de la 1a1');
+      await cargarReuniones();
+      const ahora = D.semanas.find(x => nueva >= x.desde && nueva <= x.hasta);
+      if (habia && (!ahora || ahora.codigo !== s.codigo || ahora.ciclo_id !== s.ciclo_id))
+        toast('Ojo: lo que ya habías cargado quedó en ' + s.codigo + ' y no se mueve solo', true);
+      else toast('Fecha actualizada');
+      pintarReunion();
+    };
     $('#notas').onchange = async e => {
       const { error } = await sb.from('reuniones').update({ notas: e.target.value }).eq('id', r.id);
       if (error) return fallo(error, 'guardando las notas');
