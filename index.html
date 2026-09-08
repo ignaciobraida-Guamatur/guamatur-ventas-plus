@@ -91,6 +91,10 @@ textarea{width:100%;resize:vertical;min-height:54px;line-height:1.5}
 .avances p{margin:0 0 4px;color:#334155}
 .avances p:last-child{margin-bottom:0}
 .avances .cuando{color:var(--suave);font-size:11px}
+.medido{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 11px;font-size:12.5px;margin-bottom:10px;color:#0c4a6e}
+.medido b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;color:#0369a1}
+.medido.mal{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}.medido.mal b{color:#b91c1c}
+.medido.gris{background:var(--gris);border-color:var(--borde);color:var(--suave)}.medido.gris b{color:var(--suave)}
 .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
 .pSi{background:#dcfce7;color:#166534}.pParcial{background:#fef3c7;color:#92400e}
 .pNo{background:#fee2e2;color:#991b1b}.pAbierto{background:#e0e7ff;color:#3730a3}
@@ -311,7 +315,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
   OAUTH_DOMINIO: 'guamatur.com',
-  VERSION: 'v7',
+  VERSION: 'v8',
 };
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   db: { schema: 'ventasplus' },
@@ -421,12 +425,14 @@ async function cargar() {
     sb.from('vendedores').select('*').eq('activo', true).order('orden'),
     sb.from('semanas').select('*').order('ciclo_id').order('orden'),
     sb.from('avances').select('*').order('fecha', { ascending: false }),
+    sb.from('actividad').select('*'),
   ];
   if (!esVendedor()) pedidos.push(sb.from('linea_base').select('*'));
   const r = await Promise.all(pedidos);
   for (const x of r) if (x.error) return fallo(x.error, 'cargando los datos');
   D.ciclos = r[0].data; D.vendedores = r[1].data; D.semanas = r[2].data;
-  D.avances = r[3].data; D.base = esVendedor() ? [] : r[4].data;
+  D.avances = r[3].data; D.actividad = r[4].data || [];
+  D.base = esVendedor() ? [] : r[5].data;
   D.vById = {}; D.vendedores.forEach(v => D.vById[v.id] = v);
 
   const enCurso = D.semanas.find(s => HOY >= s.desde && HOY <= s.hasta);
@@ -576,6 +582,28 @@ function pintarSemana() {
     '<div class="vacio">Nada para mostrar con este filtro.</div>';
   engancharTarjetas();
 }
+// ══ EL PUENTE CON CHATWOOT ══════════════════════════════════════════════════
+// Lo que se midió contra la API, al lado de lo que se declara. Es lo único que permite decir
+// «esto no pasó» — y por eso NO evalúa: muestra el hecho y el encargado sigue decidiendo.
+// Lo carga `C:/temp/ventasplus-datos/puente-chatwoot.js`; la app solo lee.
+function actividadDe(vid, cid, cod) {
+  const v = D.vById[vid] || {};
+  const a = (D.actividad || []).find(x => x.vendedor_id === vid && x.ciclo_id === cid && x.codigo_semana === cod);
+  if (!v.chatwoot_email)
+    return '<div class="medido gris"><b>Sin cuenta de Chatwoot asociada</b> — de ' + esc(v.corto || 'este vendedor') +
+      ' no se puede medir actividad. Se ata desde el engranaje ⚙.</div>';
+  if (!(D.actividad || []).some(x => x.ciclo_id === cid)) return '';   // el puente no corrió para este ciclo
+  if (!a || !a.mensajes)
+    return '<div class="medido mal"><b>Ninguna actividad en Chatwoot esta semana.</b> Ni un mensaje al cliente. ' +
+      'Si dice que trabajó, fue por fuera del canal y no hay forma de verificarlo.</div>';
+  return '<div class="medido"><b>Medido en Chatwoot</b> · <strong>' + a.mensajes + '</strong> mensaje' +
+    (a.mensajes > 1 ? 's' : '') + ' a <strong>' + a.conversaciones + '</strong> consulta' +
+    (a.conversaciones > 1 ? 's' : '') +
+    (a.respondieron ? ' · contestaron en <strong>' + a.respondieron + '</strong>' : ' · <strong>no contestó nadie</strong>') +
+    (a.notas ? ' · ' + a.notas + ' nota' + (a.notas > 1 ? 's' : '') + ' interna' + (a.notas > 1 ? 's' : '') : '') +
+    '</div>';
+}
+
 // Los campos de la semana, en tres bloques. Se usan en DOS lugares: la tarjeta de «Esta semana»
 // (el repaso del lunes) y adentro de «La 1a1» (la reunión). Es el mismo dato y la misma regla;
 // lo que cambia es el momento. Por eso se arman una sola vez y no dos.
@@ -597,10 +625,14 @@ function camposSemana(g, cod) {
       (av.length ? '<div class="avances" style="margin-top:9px"><b>Lo que anotó ' + esc(g.corto) + ' esta semana</b>' +
         av.map(a => '<p>' + esc(a.texto) + ' <span class="cuando">· ' + fmtF(a.fecha) + '</span></p>').join('') + '</div>' : '') +
       (g.accion_acordada ? '<div class="campo" style="margin-top:9px"><label><b>¿Cumplida?</b></label>' + seg('cumplida', ['Sí','Parcial','No']) + '</div>' +
-        '<div class="campo"><label>Evidencia — <b>qué pasó concretamente</b> (números, respuestas, capturas)</label>' +
+        // El vendedor LEE esto en «Mi historial». Decirlo acá evita que alguien escriba pensando
+        // que es interno: lo interno es la nota de la 1a1, que sí está marcada como tal.
+        '<div class="campo"><label>Evidencia — <b>qué pasó concretamente</b> (números, respuestas, capturas) · ' +
+        '<span style="color:var(--vino)">esto lo lee el vendedor</span></label>' +
         ta('evidencia', 'ej: mandó 12 mensajes, contestaron 3, 1 pasó a cotización', g.cumplida && !(g.evidencia||'').trim()) + '</div>' : ''),
-    // 2 · los números
+    // 2 · los números, con lo que se midió en Chatwoot al lado
     numeros:
+      actividadDe(g.vendedor_id, g.ciclo_id || CICLO, cod || SEMANA) +
       '<div class="numeros">' +
         '<div class="campo"><label>Fichas</label>' + inp('fichas', '0', false) + '</div>' +
         '<div class="campo"><label>Facturación USD</label>' + inp('facturacion', '0', false) + '</div>' +
@@ -1114,15 +1146,20 @@ async function pintarEquipo() {
       '<span class="cnt">Si el rol es «vendedor», elegí a cuál del plantel corresponde.</span></div>' +
 
     '<h2>El plantel <small>a quién se le sigue, y de quién es</small></h2><div class="scrollx"><table><thead><tr>' +
-    '<th>Vendedor</th><th>Encargado</th><th>Mail del encargado</th><th>Activo</th></tr></thead><tbody>' +
+    '<th>Vendedor</th><th>Encargado</th><th>Mail del encargado</th><th>Su cuenta de Chatwoot</th>' +
+    '<th>Activo</th></tr></thead><tbody>' +
     D.vendedores.map(v => '<tr><td><strong>' + esc(v.nombre) + '</strong></td>' +
       '<td class="editable"><input data-v="' + v.id + '|encargado" value="' + esc(v.encargado) + '"></td>' +
       '<td class="editable"><input data-v="' + v.id + '|encargado_email" value="' + esc(v.encargado_email) + '"></td>' +
+      '<td class="editable"><input data-v="' + v.id + '|chatwoot_email" value="' + esc(v.chatwoot_email || '') +
+        '" placeholder="sin atar — no se puede medir"' + (v.chatwoot_email ? '' : ' class="falta-dato"') + '></td>' +
       '<td class="editable" style="text-align:center"><input type="checkbox" data-v="' + v.id + '|activo"' +
         (v.activo ? ' checked' : '') + ' style="width:auto"></td></tr>').join('') +
     '</tbody></table></div>' +
     '<div class="aviso" style="margin-top:10px">El <strong>mail del encargado</strong> es lo que manda para los ' +
-    'permisos: si lo cambiás, ese vendedor pasa a ser editable por esa persona y por nadie más.</div>';
+    'permisos: si lo cambiás, ese vendedor pasa a ser editable por esa persona y por nadie más.<br>' +
+    'La <strong>cuenta de Chatwoot</strong> es la llave del puente: con ella la app puede mostrar la actividad ' +
+    'medida al lado de la declarada. Sin ella, de ese vendedor no se puede verificar nada.</div>';
 
   // La base exige que rol='vendedor' y ficha vayan juntos. Se resuelve acá con un mensaje
   // entendible, en vez de dejar que salga el error crudo de Postgres.
@@ -1159,8 +1196,11 @@ async function pintarEquipo() {
   });
   $$('[data-v]').forEach(el => el.onchange = async () => {
     const p = el.dataset.v.split('|');
-    const { error } = await sb.from('vendedores').update(
-      { [p[1]]: el.type === 'checkbox' ? el.checked : el.value }).eq('id', p[0]);
+    // vaciar el mail de Chatwoot tiene que dejar NULL, no cadena vacía: la app pregunta por
+    // «tiene cuenta atada», y un '' respondería que sí.
+    const valor = el.type === 'checkbox' ? el.checked
+      : (p[1] === 'chatwoot_email' && !el.value.trim() ? null : el.value);
+    const { error } = await sb.from('vendedores').update({ [p[1]]: valor }).eq('id', p[0]);
     if (error) return fallo(error, 'guardando el plantel');
     const ve = await sb.from('vendedores').select('*').eq('activo', true).order('orden');
     D.vendedores = ve.data; D.vById = {}; D.vendedores.forEach(x => D.vById[x.id] = x);
