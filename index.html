@@ -95,6 +95,15 @@ textarea{width:100%;resize:vertical;min-height:54px;line-height:1.5}
 .medido b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;color:#0369a1}
 .medido.mal{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}.medido.mal b{color:#b91c1c}
 .medido.gris{background:var(--gris);border-color:var(--borde);color:var(--suave)}.medido.gris b{color:var(--suave)}
+.cuenta{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.cuenta input{max-width:88px;text-align:right;font-variant-numeric:tabular-nums}
+.cuenta span{font-size:12px;color:var(--suave)}
+.cuenta strong{font-size:15px;font-variant-numeric:tabular-nums}
+.pct-ok{color:var(--ok)}.pct-medio{color:var(--medio)}.pct-mal{color:var(--mal)}
+.embudo{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(96px,100%),1fr));gap:8px}
+.embudo label{display:block;font-size:10.5px;color:var(--suave);margin-bottom:3px}
+.embudo input{width:100%;text-align:right;font-variant-numeric:tabular-nums}
+.conv{margin-top:7px;font-size:12.5px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:6px 10px;color:#166534}
 .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
 .pSi{background:#dcfce7;color:#166534}.pParcial{background:#fef3c7;color:#92400e}
 .pNo{background:#fee2e2;color:#991b1b}.pAbierto{background:#e0e7ff;color:#3730a3}
@@ -315,7 +324,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://pjxdysmegbzcrgarcmwy.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeGR5c21lZ2J6Y3JnYXJjbXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjM0MjQsImV4cCI6MjA5MTU5OTQyNH0.q1ikAwWW7PVM80Hpmgv01iIvODdv8fOBco8aATb5tAQ',
   OAUTH_DOMINIO: 'guamatur.com',
-  VERSION: 'v9',
+  VERSION: 'v10',
 };
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
   db: { schema: 'ventasplus' },
@@ -333,6 +342,9 @@ const MESc = ['ene','feb','mar','abr','may','jun','jul','ago','set','oct','nov',
 const fmtF = f => { if (!f) return '—'; const p = String(f).slice(0,10).split('-'); return +p[2] + '-' + MESc[+p[1]-1]; };
 const miles = n => Number(n || 0).toLocaleString('es-UY', { maximumFractionDigits: 0 });
 const PESO = { 'Sí': 1, 'Parcial': .5, 'No': 0 };
+// Los campos de la fila semanal que son números. En un solo lugar: agregar uno a la base y
+// olvidarse de sumarlo acá lo guardaría como texto y rompería las cuentas en silencio.
+const NUMERICOS = ['fichas','facturacion','rentabilidad','meta','logrado','respondieron','cotizaciones','ventas'];
 const numOnull = v => String(v).trim() === '' ? null : Number(String(v).replace(',', '.'));
 
 let YO = null, D = {}, CICLO = '', SEMANA = '', RSEL = null, MODO = 'tarjetas';
@@ -521,12 +533,16 @@ addEventListener('resize', medirTope);
 // ══ ¿Qué falta para dar la semana por cerrada? ═══════════════════════════════
 // Tres pasos, en el orden en que se hace la reunión. Nada de adivinar.
 function pasos(g, cerrada) {
-  const p1 = !g.accion_acordada ? true : !!(g.cumplida && (g.evidencia || '').trim());
+  // Si la acción llevaba un número, el paso 1 no está cerrado hasta que se diga cuántos hizo:
+  // marcar «Parcial» sin el número deja el cumplimiento del ciclo en una estimación.
+  const faltaCuenta = g.meta_acordada > 0 && g.logrado == null;
+  const p1 = !g.accion_acordada ? true : !!(g.cumplida && (g.evidencia || '').trim()) && !faltaCuenta;
   const p2 = !!g.chatwoot_ok && (!cerrada || g.fichas != null || g.facturacion != null);
   const p3 = !!(g.accion_proxima || '').trim();
   const falta = [];
   if (g.accion_acordada && !g.cumplida) falta.push('evaluar lo acordado');
   else if (g.cumplida && !(g.evidencia || '').trim()) falta.push('la evidencia');
+  if (faltaCuenta) falta.push('cuántos hizo de los ' + g.meta_acordada);
   if (!g.chatwoot_ok) falta.push('marcar Chatwoot');
   if (cerrada && g.fichas == null && g.facturacion == null) falta.push('los números');
   if (!p3) falta.push('qué le pedís para la próxima');
@@ -624,7 +640,42 @@ function camposSemana(g, cod) {
         (g.accion_acordada ? esc(g.accion_acordada) : 'La semana pasada no se le pidió nada.') + '</div>' +
       (av.length ? '<div class="avances" style="margin-top:9px"><b>Lo que anotó ' + esc(g.corto) + ' esta semana</b>' +
         av.map(a => '<p>' + esc(a.texto) + ' <span class="cuando">· ' + fmtF(a.fecha) + '</span></p>').join('') + '</div>' : '') +
-      (g.accion_acordada ? '<div class="campo" style="margin-top:9px"><label><b>¿Cumplida?</b></label>' + seg('cumplida', ['Sí','Parcial','No']) + '</div>' +
+      // Si la acción llevaba un número, el cumplimiento se CUENTA en vez de opinarse:
+      // «Parcial» puede ser 9 de 10 o 1 de 10, y no son lo mismo.
+      (g.accion_acordada && g.meta_acordada > 0
+        ? '<div class="campo" style="margin-top:9px"><label><b>¿Cuántos hizo?</b> — se le habían pedido <b>' +
+          g.meta_acordada + '</b></label><div class="cuenta">' +
+          '<input data-f="logrado" type="number" min="0" step="1" value="' +
+            esc(g.logrado == null ? '' : g.logrado) + '" placeholder="0"' +
+            (g.logrado == null ? ' class="falta-dato"' : '') + dis + '>' +
+          '<span>de ' + g.meta_acordada + '</span>' +
+          (g.logrado == null ? '' : '<strong class="' + (g.logrado >= g.meta_acordada ? 'pct-ok'
+            : g.logrado > 0 ? 'pct-medio' : 'pct-mal') + '">' +
+            Math.min(100, Math.round(g.logrado / g.meta_acordada * 100)) + '%</strong>') +
+          '</div></div>' +
+          // El embudo: contactar 10 no vale nada si no se sabe qué salió. Solo aparece cuando la
+          // acción se contaba, así que la complejidad no molesta a quien no la necesita.
+          '<div class="campo"><label>Y de esos, <b>¿qué salió?</b> ' +
+            '<span style="color:var(--suave)">contestaron → cotizaron → compraron</span></label>' +
+            '<div class="embudo">' +
+              '<div><label>Contestaron</label><input data-f="respondieron" type="number" min="0" step="1" value="' +
+                esc(g.respondieron == null ? '' : g.respondieron) + '" placeholder="0"' + dis + '></div>' +
+              '<div><label>Cotizaciones</label><input data-f="cotizaciones" type="number" min="0" step="1" value="' +
+                esc(g.cotizaciones == null ? '' : g.cotizaciones) + '" placeholder="0"' + dis + '></div>' +
+              '<div><label>Ventas</label><input data-f="ventas" type="number" min="0" step="1" value="' +
+                esc(g.ventas == null ? '' : g.ventas) + '" placeholder="0"' + dis + '></div>' +
+            '</div>' +
+            (g.logrado > 0 && g.ventas != null
+              ? '<div class="conv">De ' + g.logrado + ' contactados salieron <strong>' + g.ventas +
+                '</strong> venta' + (g.ventas === 1 ? '' : 's') + ' — <strong>' +
+                Math.round(g.ventas / g.logrado * 1000) / 10 + '%</strong> de conversión</div>'
+              : '') + '</div>'
+        : '') +
+      (g.accion_acordada ? '<div class="campo" style="margin-top:9px"><label><b>¿Cumplida?</b>' +
+        (g.meta_acordada > 0 && g.logrado != null
+          ? ' <span style="color:var(--suave);font-weight:400">— con ' + g.logrado + ' de ' + g.meta_acordada +
+            ', el ciclo cuenta ' + Math.min(100, Math.round(g.logrado / g.meta_acordada * 100)) + '%</span>'
+          : '') + '</label>' + seg('cumplida', ['Sí','Parcial','No']) + '</div>' +
         // El vendedor LEE esto en «Mi historial». Decirlo acá evita que alguien escriba pensando
         // que es interno: lo interno es la nota de la 1a1, que sí está marcada como tal.
         '<div class="campo"><label>Evidencia — <b>qué pasó concretamente</b> (números, respuestas, capturas) · ' +
@@ -642,7 +693,15 @@ function camposSemana(g, cod) {
     // 3 · lo que le pedimos ahora
     proxima:
       '<div class="campo"><label><b>Acción para esta semana</b> — concreta y medible</label>' +
-        ta('accion_proxima', 'ej: contactar a los 15 de la lista de verano y traer las respuestas', !g.accion_proxima) + '</div>' +
+        ta('accion_proxima', 'ej: contactar a los de la lista de verano y traer las respuestas', !g.accion_proxima) + '</div>' +
+      // Poner un número acá es lo que hace que la semana que viene «Parcial» deje de ser una
+      // opinión. Es opcional a propósito: hay acciones que no se cuentan.
+      '<div class="campo"><label><b>¿Cuántos?</b> — si la acción se cuenta, poné el número ' +
+        '<span style="color:var(--suave)">(ej: 10 contactos). Si no se cuenta, dejalo vacío.</span></label>' +
+        '<div class="cuenta"><input data-f="meta" type="number" min="0" step="1" style="max-width:110px" value="' +
+        esc(g.meta == null ? '' : g.meta) + '" placeholder="—"' + dis + '>' +
+        '<span>' + (g.meta > 0 ? 'la semana que viene la app te pregunta cuántos hizo de esos ' + g.meta
+                               : 'sin número, se evalúa con Sí / Parcial / No') + '</span></div></div>' +
       '<div class="campo"><label>¿Qué necesita de nosotros? <b>Si siempre queda vacío, esto es una auditoría</b></label>' +
         inp('bloqueo', 'ej: necesita el PDF de preventa aprobado', false) + '</div>',
     foco:
@@ -687,7 +746,7 @@ function engancharCampos(raiz, vid, cod) {
       guardarCelda(vid, { [f]: el.classList.contains('on') ? null : el.dataset.v }, cod);
     else el.onchange = () => {
       if (f === 'foco') return guardarFoco(vid, el.value);
-      const num = ['fichas','facturacion','rentabilidad'].includes(f);
+      const num = NUMERICOS.includes(f);
       guardarCelda(vid, { [f]: num ? numOnull(el.value) : el.value }, cod);
     };
   });
@@ -745,7 +804,7 @@ function pintarGrilla() {
   $$('[data-g]').forEach(el => el.onchange = () => {
     const p = el.dataset.g.split('|'), f = p[1];
     if (f === 'foco') return guardarFoco(p[0], el.value);
-    const num = ['fichas','facturacion','rentabilidad'].includes(f);
+    const num = NUMERICOS.includes(f);
     guardarCelda(p[0], { [f]: el.value === '' ? null : (num ? numOnull(el.value) : el.value) });
   });
 }
