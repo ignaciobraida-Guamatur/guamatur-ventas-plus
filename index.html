@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Ventas+ cambió de dirección</title>
+<!-- Respaldo por si el navegador no corre JavaScript: redirige igual a los 4 segundos. -->
+<meta http-equiv="refresh" content="4;url=https://guamatur.github.io/guamatur-ventas-plus/">
+<style>
+  :root { --fondo: #f6f5f2; --texto: #1f1f1f; --suave: #5f5f5f; --acento: #0b6b55; --tarjeta: #ffffff; --borde: #e3e1dc; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fondo: #171717; --texto: #f0efec; --suave: #b3b1ac; --acento: #4fc3a1; --tarjeta: #222222; --borde: #333333; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+         background: var(--fondo); color: var(--texto);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+  main { max-width: 460px; width: 100%; background: var(--tarjeta); border: 1px solid var(--borde);
+         border-radius: 14px; padding: 28px 24px; }
+  h1 { font-size: 1.35rem; margin: 0 0 12px; }
+  p { margin: 0 0 12px; }
+  a.nuevo { display: block; word-break: break-all; font-weight: 600; color: var(--acento);
+            padding: 12px 14px; border: 1px solid var(--borde); border-radius: 10px; text-decoration: none; }
+  a.nuevo:hover, a.nuevo:focus-visible { text-decoration: underline; }
+  .suave { color: var(--suave); font-size: .92rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ventas+ cambió de dirección</h1>
+  <p>Guardá este link nuevo en tus favoritos:</p>
+  <p><a class="nuevo" id="nuevo" href="https://guamatur.github.io/guamatur-ventas-plus/">guamatur.github.io/guamatur-ventas-plus</a></p>
+  <p class="suave" aria-live="polite">Te llevamos en <span id="seg">3</span> segundos. También podés tocar el link.</p>
+  <p class="suave">Dudas: infraestructura@guamatur.com</p>
+</main>
+<script>
+  // Conserva lo que venga después de la dirección vieja (parámetros y #), para no perder a dónde iba la persona.
+  var NUEVA = 'https://guamatur.github.io/guamatur-ventas-plus/';
+  var resto = location.pathname.replace(/^\/guamatur-ventas-plus\/?/i, '');
+  var destino = NUEVA + resto + location.search + location.hash;
+  document.getElementById('nuevo').href = destino;
+  var s = 3, el = document.getElementById('seg');
+  var t = setInterval(function () {
+    s -= 1; el.textContent = s;
+    if (s <= 0) { clearInterval(t); location.replace(destino); }
+  }, 1000);
+</script>
+</body>
+</html>
